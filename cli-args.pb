@@ -77,6 +77,7 @@ EndProcedure
 ;
 
 ; TODO: Ajouter des valeurs par défault et autres
+; TODO: Utiliser un char pour les courts -> protège des "erreurs"
 Procedure RegisterShortOption(OptShort.s, OptDesc.s="no-description", OptValue.b=#False)
   AddElement(ArgsList())
   ArgsList()\FlagShort = OptShort
@@ -148,29 +149,19 @@ Procedure ParseArguments()
       Continue
     EndIf
     
-    ; TODO: Supporter les arguments plus petit que 3 caractères.
-    ; NOTE: Devrait être bon, pas sûr...
-    
-    ; TODO: Supporter les "/" pour windows...
-    
-    ; Vérifie si des tirets sont au début du paramètre
-    If Len(ReplaceString(Left(CurrentArgument, 1), "-", "")) = 0
-      
-      ;Vérifie si plusieurs "arguments courts" sont utilisés
-      If Len(ReplaceString(Left(CurrentArgument, 2), "-", "")) > 0
-        
+    If FindString(CurrentArgument, "-")
+      If FindString(CurrentArgument, "--")
+        ProcessCliOption(LTrim(CurrentArgument, "-"))
+      Else
         ; TODO: Utiliser une bool pour ne pas utiliser ProgramParameter() 2 fois et faire tout merder.
         For i=1 To Len(CurrentArgument) - 1
           ProcessCliOption(Mid(CurrentArgument, i+1, 1))
         Next
-      Else
-        ProcessCliOption(ReplaceString(CurrentArgument, "-", ""))
       EndIf
-    ElseIf #False
-      ; Nope
-      ; Windows "/" Part
+    ElseIf FindString(CurrentArgument, "/")
+      ProcessCliOption(LTrim(CurrentArgument, "/"))
     Else
-      ; Simple texte
+      Debug "Text argument detected"
     EndIf
   Wend
 EndProcedure
@@ -238,8 +229,8 @@ EndIf
 Delay(2500)
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 213
-; FirstLine = 190
+; CursorPosition = 160
+; FirstLine = 130
 ; Folding = --
 ; EnableUnicode
 ; EnableXP
