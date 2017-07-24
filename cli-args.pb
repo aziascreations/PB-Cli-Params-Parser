@@ -21,15 +21,14 @@
 ;   Github: github.com/aziascreations/cli-args-pb
 ; ------------------------------------------------------------
 
-;
-;-------- Structure and variables --------
-;
-
 ;Temp
 OpenConsole()
 
+;
+;-------- Variables, structures and constants --------
+;
+
 Structure CliArg
-  ; Is this the "real" name ?
   FlagShort.s
   FlagLong.s
   FlagDescription.s
@@ -37,15 +36,22 @@ Structure CliArg
   DefaultValue.s
 EndStructure
 
+Enumeration
+  #ARG_ANY
+  #ARG_WINDOWS
+  #ARG_UNIX
+EndEnumeration
+
 ; TODO: Checker si le "Global" est vraiment nescessaire
 Global NewList ArgsList.CliArg()
 Global NewMap ArgsValues.s()
+Global ArgumentsParsingMode.b = #ARG_ANY
 
 ;
-;-------- Internal Procedures and stuff --------
+;-------- Procedures and stuff --------
 ;
 
-Procedure IsCliOptionRegistered(Option.s)
+Procedure IsOptionRegistered(Option.s)
   ForEach ArgsList()
     If ArgsList()\FlagShort = Option Or ArgsList()\FlagLong = Option
       ProcedureReturn #True
@@ -54,27 +60,40 @@ Procedure IsCliOptionRegistered(Option.s)
   ProcedureReturn #False
 EndProcedure
 
-Procedure PrintUsageErrorText(Option.s)
-  PrintN("Unsupported option: "+Option)
-  If IsCliOptionRegistered("help")
-    PrintN("Use --help to see available options")
+Procedure IsOptionUsed(Option.s)
+  ForEach ArgsList()
+    If (ArgsList()\FlagShort = Option Or ArgsList()\FlagLong = Option) = #False
+      Continue
+    EndIf
+    
+    If FindMapElement(ArgsValues(), ArgsList()\FlagShort) Or FindMapElement(ArgsValues(), ArgsList()\FlagLong)
+      ProcedureReturn #True
+    EndIf
+  Next
+  
+  ProcedureReturn #False
+EndProcedure
+
+Procedure GetOptionValue(Option.s)
+  ProcedureReturn #Null
+EndProcedure
+
+Procedure PrintUsageErrorText(Option.s, Reason.s="")
+  Print("Unsupported option: "+Option)
+  If Reason
+    Print(" ("+Reason+")")
   EndIf
+  PrintN("")
+  
+  If IsOptionRegistered("help") And (ArgumentsParsingMode = #ARG_ANY Or ArgumentsParsingMode = #ARG_UNIX)
+    PrintN("Use --help to see available options")
+  ElseIf IsOptionRegistered("?") And (ArgumentsParsingMode = #ARG_ANY Or ArgumentsParsingMode = #ARG_WINDOWS)
+    PrintN("Use /? to see available options")
+  EndIf
+  
   Debug "Usage error: "+Option
   End 1
 EndProcedure
-
-Procedure ProcessCliOption(Option.s)
-  Debug "Processing: "+Option
-  If IsCliOptionRegistered(Option) = #False
-    PrintUsageErrorText(Option)
-  EndIf
-  
-  ArgsValues(Option) = "TEMP"
-EndProcedure
-
-;
-;-------- Public Procedures and other stuff --------
-;
 
 ; TODO: Ajouter des valeurs par défault et autres
 ; TODO: Utiliser un char pour les courts -> protège des "erreurs"
@@ -102,7 +121,7 @@ Procedure RegisterCompleteOption(OptShort.s, OptLong.s, OptDesc.s="no-descriptio
   ArgsList()\HasValue = OptValue
 EndProcedure
 
-Procedure PrintHelpText(UsageText.s="[OPTIONS] FILES...", OptDescSpace.i=2)
+Procedure PrintHelpText(UsageText.s="Usage: [OPTIONS] FILES...", OptDescSpace.i=2, OptionPrefix.s="-")
   OffsetLenght.i = 0
   ; Calculating minimum offset lenght for descriptions
   ForEach ArgsList()
@@ -112,7 +131,7 @@ Procedure PrintHelpText(UsageText.s="[OPTIONS] FILES...", OptDescSpace.i=2)
   Next
   ;Debug OffsetLenght
   
-  PrintN("Usage: "+UsageText)
+  PrintN(UsageText)
   PrintN("")
   ForEach ArgsList()
     ; Check how to print the short flag
@@ -138,18 +157,31 @@ Procedure PrintHelpText(UsageText.s="[OPTIONS] FILES...", OptDescSpace.i=2)
   Next
 EndProcedure
 
-Procedure ParseArguments()
-  HasFinishedParsing.b = #False
+Procedure ProcessCliOption(Option.s)
+  Debug "Processing: "+Option
+  If IsOptionRegistered(Option) = #False
+    PrintUsageErrorText(Option)
+  EndIf
   
-  While HasFinishedParsing = #False
+  ArgsValues(Option) = "TEMP"
+EndProcedure
+
+Procedure ParseArguments(ParsingMode.b=#ARG_ANY)
+  ArgumentsParsingMode = ParsingMode
+  
+  While #True
     CurrentArgument.s = ProgramParameter()
     
     If Len(CurrentArgument) = 0
-      HasFinishedParsing = #True
-      Continue
+      Break
     EndIf
     
     If FindString(CurrentArgument, "-")
+      If ArgumentsParsingMode = #ARG_WINDOWS
+        Debug "Wrong prefix used, "+CurrentArgument+" will be ignored (Unix instead of Win)"
+        PrintUsageErrorText(CurrentArgument, "Wrong prefix")
+      EndIf
+      
       If FindString(CurrentArgument, "--")
         ProcessCliOption(LTrim(CurrentArgument, "-"))
       Else
@@ -159,34 +191,21 @@ Procedure ParseArguments()
         Next
       EndIf
     ElseIf FindString(CurrentArgument, "/")
+      If ArgumentsParsingMode = #ARG_UNIX
+        Debug "Wrong prefix used, "+CurrentArgument+" will be ignored (Win instead of Unix)"
+        PrintUsageErrorText(CurrentArgument, "Wrong prefix")
+      EndIf
+      
       ProcessCliOption(LTrim(CurrentArgument, "/"))
     Else
       Debug "Text argument detected"
+      ; TODO: Handle this
     EndIf
   Wend
 EndProcedure
 
-Procedure IsOptionUsed(Option.s)
-  ForEach ArgsList()
-    If (ArgsList()\FlagShort = Option Or ArgsList()\FlagLong = Option) = #False
-      Continue
-    EndIf
-    
-    If FindMapElement(ArgsValues(), ArgsList()\FlagShort) Or FindMapElement(ArgsValues(), ArgsList()\FlagLong)
-      ProcedureReturn #True
-    EndIf
-  Next
-  
-  ProcedureReturn #False
-EndProcedure
-
-Procedure GetOptionValue(Option.s)
-  ProcedureReturn #Null
-EndProcedure
-
-
 ;
-;-------- Test: Setup --------
+;-------- Tests --------
 ;
 
 RegisterCompleteOption("a","all","Complete option with all args", #False)
@@ -198,8 +217,11 @@ RegisterLongOption("define","Long option with all args", #False)
 RegisterLongOption("eclipse","Long option without value args", #False)
 
 RegisterLongOption("help","Print help text")
+RegisterShortOption("?","Print help text")
 
 ParseArguments()
+;ParseArguments(#ARG_UNIX)
+;ParseArguments(#ARG_WINDOWS)
 
 If IsOptionUsed("all")
   Debug "true1 --all/-a is used (long test)"
@@ -217,10 +239,9 @@ If IsOptionUsed("c")
   Debug "true4 -c is used"
 EndIf
 
-
-;
-;-------- Test: Execute --------
-;
+If IsOptionUsed("?")
+  Debug "true5 -? or /? is used"
+EndIf
 
 If IsOptionUsed("help")
   PrintHelpText()
@@ -229,8 +250,8 @@ EndIf
 Delay(2500)
 
 ; IDE Options = PureBasic 5.30 (Windows - x64)
-; CursorPosition = 160
-; FirstLine = 130
-; Folding = --
+; CursorPosition = 221
+; FirstLine = 186
+; Folding = P+
 ; EnableUnicode
 ; EnableXP
