@@ -1,27 +1,40 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.30 (Windows - x64)">
+<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.50 (Windows - x64)">
   <section name="config">
     <options closefiles="1" openmode="0" name="cli-args"/>
   </section>
   <section name="data">
     <explorer view="" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2017-07-24 09:15" user="Herwin" host="DESKTOP-RHJNB76"/>
+    <lastopen date="2017-07-25 22:50" user="Herwin" host="DESKTOP-RHJNB76"/>
   </section>
   <section name="files">
     <file name="cli-args.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
-      <fingerprint md5="e9356583a1d50d6e649180cd89ba7196"/>
+      <fingerprint md5="9f6f7e4e067984134ab50a3e95ea6474"/>
+    </file>
+    <file name="cli-args-test.pb">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
+      <fingerprint md5="7a7c57d444eda5f88b7227068ce369dc"/>
     </file>
   </section>
   <section name="targets">
-    <target name="Default Target" enabled="1" default="1">
+    <target name="Main Target" enabled="1" default="1">
       <inputfile value="cli-args.pb"/>
-      <outputfile value="tmp.exe"/>
+      <outputfile value="cli-args"/>
+      <compiler version="PureBasic 5.50 (Windows - x64)"/>
+      <executable value="cli-args"/>
+      <options unicode="1" debug="1"/>
+      <format exe="console" cpu="0"/>
+    </target>
+    <target name="Testing Target" enabled="1" default="0">
+      <inputfile value="cli-args-test.pb"/>
+      <outputfile value="cli-args-test.exe"/>
+      <compiler version="PureBasic 5.50 (Windows - x64)"/>
       <commandline value="--help -ac /eclipse /? test.txt"/>
-      <executable value="tmp.exe"/>
-      <options unicode="1" xpskin="1" debug="1"/>
+      <executable value="cli-args-test.exe"/>
+      <options debug="1"/>
       <format exe="console" cpu="0"/>
     </target>
   </section>

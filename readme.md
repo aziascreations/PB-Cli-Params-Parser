@@ -90,5 +90,12 @@ If you want to use "sub-commands" like in git, you can simply call the "ProgramP
 If the sub-command is optional, you [check 1st string or use future? method]
 However, you can't reset [the whole thing]
 
+## Planned features
+
+* Arguments/Options with values
+  * Type thingy
+* Full "language" [customisation] via a .lang file of something like that.
+* Better "sub-command" support (if string before all args or something)
+
 ## License
 [Apache V2](LICENSE)
