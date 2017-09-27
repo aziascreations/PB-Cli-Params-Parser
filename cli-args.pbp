@@ -7,20 +7,20 @@
   <section name="data">
     <explorer view="" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2017-07-25 22:50" user="Herwin" host="DESKTOP-RHJNB76"/>
+    <lastopen date="2017-09-27 12:11" user="Herwin" host="DESKTOP-UAKS81M"/>
   </section>
   <section name="files">
-    <file name="cli-args.pb">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
-      <fingerprint md5="9f6f7e4e067984134ab50a3e95ea6474"/>
-    </file>
     <file name="cli-args-test.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
-      <fingerprint md5="7a7c57d444eda5f88b7227068ce369dc"/>
+      <fingerprint md5="d356d6686262ff1fb2c2f4c96782c5f6"/>
+    </file>
+    <file name="cli-args.pb">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
+      <fingerprint md5="ee94723bcc243ad46d5de77b23c62b0b"/>
     </file>
   </section>
   <section name="targets">
-    <target name="Main Target" enabled="1" default="1">
+    <target name="Main Target" enabled="1" default="0">
       <inputfile value="cli-args.pb"/>
       <outputfile value="cli-args"/>
       <compiler version="PureBasic 5.50 (Windows - x64)"/>
@@ -28,11 +28,11 @@
       <options unicode="1" debug="1"/>
       <format exe="console" cpu="0"/>
     </target>
-    <target name="Testing Target" enabled="1" default="0">
+    <target name="Testing Target" enabled="1" default="1">
       <inputfile value="cli-args-test.pb"/>
       <outputfile value="cli-args-test.exe"/>
       <compiler version="PureBasic 5.50 (Windows - x64)"/>
-      <commandline value="--help -ac /eclipse /? test.txt"/>
+      <commandline value="--help -d &quot;up the street&quot; -ac /eclipse /? test.txt"/>
       <executable value="cli-args-test.exe"/>
       <options debug="1"/>
       <format exe="console" cpu="0"/>
