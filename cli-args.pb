@@ -7,7 +7,7 @@
 ;  projects.
 ; 
 ; Usage:
-;   ???
+;   See readme.md
 ; 
 ; Additional infos:
 ;   If you want To use "sub-command" like git, you can simply
@@ -22,13 +22,21 @@
 ; ------------------------------------------------------------
 
 ;
-;-------- Personnal notes --------
+;- Personnal notes
 ;
 
-; The OptDefaultValue.s in Register[...]Option() could be used if #ARGV_JOINED is used but no value is given ?
+; The OptDefaultValue.s in Register[...]Option() could be used if #ARG_VALUE_JOINED is used but no value is given ?
+
+; Check if it possible to use a "function pointer" for the help and usage error procedures to be able to change them.
+
+; TODO: Apply default values to seperated and joined? options that passes the #ERR_NO_JOINED_VALUE.
+
+; TODO: Check every instance of default value, mainly in registerers, to see if they use the new constant.
+
+; URGENT: TODO: Fix the pointer in the GetOptionValue procedure. (Solution should be in the help thingy)
 
 ;
-;-------- Variables, structures and constants --------
+;- Variables, structures and constants
 ;
 
 Structure CliArg
@@ -36,37 +44,54 @@ Structure CliArg
 	FlagLong.s
 	FlagDescription.s
 	ValueType.b
-	;ValueRequired.b
 	DefaultValue.s
 EndStructure
 
+; Used to indicate what kind of prefix can be used.
 Enumeration
-	#ARG_ANY
-	#ARG_WINDOWS
-	#ARG_UNIX
+	#ARG_PREFIX_ANY
+	#ARG_PREFIX_WINDOWS
+	#ARG_PREFIX_UNIX
 EndEnumeration
 
+; Used to indicate how the value of the parameter can be entered.
+; If the short one is used, the next argument will always be used.
 Enumeration
-	#ARGV_NONE
-	#ARGV_ANY
-	#ARGV_JOINED
-	#ARGV_SEPARATED
+	#ARG_VALUE_NONE
+	#ARG_VALUE_ANY
+	#ARG_VALUE_JOINED
+	#ARG_VALUE_SEPARATED
 EndEnumeration
 
-; TODO: Checker si le "Global" est vraiment nescessaire.
+; Used to enable and disable some triggers for the PrintUsageError procedure
+Enumeration
+	#ERR_WRONG_PREFIX = %00000001
+	#ERR_OPTION_NOT_REGISTERED = %00000010
+	#ERR_NO_JOINED_VALUE = %00000100
+	#ERR_NO_SEPARATED_VALUE = %00001000
+	#ERR_UNKNOWN = %00010000
+EndEnumeration
+
+; This value is given to every option that shouldn't have one so it can be easily checked if you use GetOptionValue
+;  on one that uses #ARG_VALUE_NONE.
+#OPTION_ERROR_VALUE = "You Done Fucked Up Now!!"
+
 Global NewList ArgsList.CliArg()
+Global ArgumentsParsingMode.b = #ARG_PREFIX_ANY
+
+; WTF is this shit ?
 ; NOTE: The short or long "flag" is added here if used and the value too if needed.
 Global NewMap ArgsValues.s()
-Global ArgumentsParsingMode.b = #ARG_ANY
-
 ; TODO: Trouver un meilleur moyen de faire ça et séparer le mode (1ere position) et les autres à la fin.
 Global NewList TextArgs.s()
-Global NewList TextArgsPosition.i()
+;Global NewList TextArgsPosition.i()
 
 ;
-;-------- Procedures and stuff --------
+;- Procedures: Helpers & Getters
 ;
 
+; Checks if an option is registered and returns #True or #False accordingly.
+; Only used internally, has no real usage otherwise, except if you make git-like commands i guess.
 Procedure IsOptionRegistered(Option.s)
 	ForEach ArgsList()
 		If ArgsList()\FlagShort = Option Or ArgsList()\FlagLong = Option
@@ -76,6 +101,7 @@ Procedure IsOptionRegistered(Option.s)
 	ProcedureReturn #False
 EndProcedure
 
+; Checks if an option was in the launch arguments and returns #True or #False accordingly.
 Procedure IsOptionUsed(Option.s)
 	ForEach ArgsList()
 		If Not (ArgsList()\FlagShort = Option Or ArgsList()\FlagLong = Option)
@@ -90,7 +116,7 @@ Procedure IsOptionUsed(Option.s)
 	ProcedureReturn #False
 EndProcedure
 
-Procedure GetOptionValueType(Option.s, FallbackValue.b=#ARGV_NONE)
+Procedure GetOptionValueType(Option.s, FallbackValue.b=#ARG_VALUE_NONE)
 	ForEach ArgsList()
 		If Not (ArgsList()\FlagShort = Option Or ArgsList()\FlagLong = Option)
 			Continue
@@ -102,6 +128,7 @@ Procedure GetOptionValueType(Option.s, FallbackValue.b=#ARGV_NONE)
 	ProcedureReturn FallbackValue
 EndProcedure
 
+; Returns a pointer to the option value
 Procedure GetOptionValue(Option.s)
 	ForEach ArgsList()
 		If Not (ArgsList()\FlagShort = Option Or ArgsList()\FlagLong = Option)
@@ -119,70 +146,11 @@ Procedure GetOptionValue(Option.s)
 	End 1
 EndProcedure
 
-Procedure PrintUsageErrorText(Option.s, Reason.s="")
-	Print("Unsupported option: "+Option)
-	If Reason
-		Print(" ("+Reason+")")
-	EndIf
-	PrintN("")
-	
-	If IsOptionRegistered("help") And (ArgumentsParsingMode = #ARG_ANY Or ArgumentsParsingMode = #ARG_UNIX)
-		PrintN("Use --help to see available options")
-	ElseIf IsOptionRegistered("?") And (ArgumentsParsingMode = #ARG_ANY Or ArgumentsParsingMode = #ARG_WINDOWS)
-		PrintN("Use /? to see available options")
-	EndIf
-	
-	Debug "Usage error: "+Option
-	End 1
-EndProcedure
+;
+;- Procedures: Printers ?
+;
 
-; TODO: Ajouter des valeurs par défault et autres
-; TODO: Utiliser un char pour les courts -> protège des "erreurs"
-Procedure RegisterShortOption(OptShort.c, OptDesc.s="no-description", OptValue.b=#ARGV_NONE, OptDefaultValue.s="")
-	AddElement(ArgsList())
-	ArgsList()\FlagShort = Chr(OptShort)
-	ArgsList()\FlagLong = ""
-	ArgsList()\FlagDescription = OptDesc
-	
-	If Not (OptValue = #ARGV_NONE Or OptValue = #ARGV_ANY Or OptValue = #ARGV_JOINED Or OptValue = #ARGV_SEPARATED)
-		Debug "Error: No ARGV_* constant used for " + OptShort
-		End 1
-	EndIf
-	
-	ArgsList()\ValueType = OptValue
-	ArgsList()\DefaultValue = OptDefaultValue
-EndProcedure
-
-Procedure RegisterLongOption(OptLong.s, OptDesc.s="no-description", OptValue.b=#ARGV_NONE, OptDefaultValue.s="")
-	AddElement(ArgsList())
-	ArgsList()\FlagShort = ""
-	ArgsList()\FlagLong = OptLong
-	ArgsList()\FlagDescription = OptDesc
-	
-	If Not (OptValue = #ARGV_NONE Or OptValue = #ARGV_ANY Or OptValue = #ARGV_JOINED Or OptValue = #ARGV_SEPARATED)
-		Debug "Error: No ARGV_* constant used for " + OptLong
-		End 1
-	EndIf
-	
-	ArgsList()\ValueType = OptValue
-	ArgsList()\DefaultValue = OptDefaultValue
-EndProcedure
-
-Procedure RegisterCompleteOption(OptShort.c, OptLong.s, OptDesc.s="no-description", OptValue.b=#ARGV_NONE, OptDefaultValue.s="")
-	AddElement(ArgsList())
-	ArgsList()\FlagShort = Chr(OptShort)
-	ArgsList()\FlagLong = OptLong
-	ArgsList()\FlagDescription = OptDesc
-	
-	If Not (OptValue = #ARGV_NONE Or OptValue = #ARGV_ANY Or OptValue = #ARGV_JOINED Or OptValue = #ARGV_SEPARATED)
-		Debug "Error: No ARGV_* constant used for " + OptShort + " / " + OptLong
-		End 1
-	EndIf
-	
-	ArgsList()\ValueType = OptValue
-	ArgsList()\DefaultValue = OptDefaultValue
-EndProcedure
-
+; TODO: Implement argument prefixes.
 Procedure PrintHelpText(UsageText.s="Usage: [OPTIONS] FILES...", OptDescSpace.i=2, OptionPrefix.s="-")
 	OffsetLenght.i = 0
 	; Calculating minimum offset lenght for descriptions
@@ -219,74 +187,174 @@ Procedure PrintHelpText(UsageText.s="Usage: [OPTIONS] FILES...", OptDescSpace.i=
 	Next
 EndProcedure
 
-Procedure ProcessCliOption(Option.s)
+Procedure PrintUsageErrorText(Option.s, Reason.s="")
+	Print("Unsupported option: "+Option)
+	If Reason
+		Print(" ("+Reason+")")
+	EndIf
+	PrintN("")
+	
+	If IsOptionRegistered("help") And (ArgumentsParsingMode = #ARG_PREFIX_ANY Or ArgumentsParsingMode = #ARG_PREFIX_UNIX)
+		PrintN("Use --help to see available options")
+	ElseIf IsOptionRegistered("?") And (ArgumentsParsingMode = #ARG_PREFIX_ANY Or ArgumentsParsingMode = #ARG_PREFIX_WINDOWS)
+		PrintN("Use /? to see available options")
+	EndIf
+	
+	Debug "Usage error: "+Option
+	End 1
+EndProcedure
+
+;
+;- Procedures: Options Registerers
+;
+
+Procedure RegisterShortOption(OptShort.c, OptDesc.s="no-description", OptValue.b=#ARG_VALUE_NONE, OptDefaultValue.s="")
+	AddElement(ArgsList())
+	ArgsList()\FlagShort = Chr(OptShort)
+	ArgsList()\FlagLong = ""
+	ArgsList()\FlagDescription = OptDesc
+	
+	If Not (OptValue = #ARG_VALUE_NONE Or OptValue = #ARG_VALUE_ANY Or OptValue = #ARG_VALUE_JOINED Or OptValue = #ARG_VALUE_SEPARATED)
+		Debug "Error: No ARG_VALUE_* constant used for " + OptShort
+		End 1
+	EndIf
+	
+	ArgsList()\ValueType = OptValue
+	ArgsList()\DefaultValue = OptDefaultValue
+EndProcedure
+
+Procedure RegisterLongOption(OptLong.s, OptDesc.s="no-description", OptValue.b=#ARG_VALUE_NONE, OptDefaultValue.s="")
+	AddElement(ArgsList())
+	ArgsList()\FlagShort = ""
+	ArgsList()\FlagLong = OptLong
+	ArgsList()\FlagDescription = OptDesc
+	
+	If Not (OptValue = #ARG_VALUE_NONE Or OptValue = #ARG_VALUE_ANY Or OptValue = #ARG_VALUE_JOINED Or OptValue = #ARG_VALUE_SEPARATED)
+		Debug "Error: No ARG_VALUE_* constant used for " + OptLong
+		End 1
+	EndIf
+	
+	ArgsList()\ValueType = OptValue
+	ArgsList()\DefaultValue = OptDefaultValue
+EndProcedure
+
+Procedure RegisterCompleteOption(OptShort.c, OptLong.s, OptDesc.s="no-description", OptValue.b=#ARG_VALUE_NONE, OptDefaultValue.s="")
+	AddElement(ArgsList())
+	ArgsList()\FlagShort = Chr(OptShort)
+	ArgsList()\FlagLong = OptLong
+	ArgsList()\FlagDescription = OptDesc
+	
+	If Not (OptValue = #ARG_VALUE_NONE Or OptValue = #ARG_VALUE_ANY Or OptValue = #ARG_VALUE_JOINED Or OptValue = #ARG_VALUE_SEPARATED)
+		Debug "Error: No ARG_VALUE_* constant used for " + OptShort + " / " + OptLong
+		End 1
+	EndIf
+	
+	ArgsList()\ValueType = OptValue
+	ArgsList()\DefaultValue = OptDefaultValue
+EndProcedure
+
+;
+;- Procedures: Main Ones
+;
+
+; IDK ?
+Procedure ProcessCliOption(Option.s, UsageErrorTriggers.b)
 	Debug "Processing: "+Option
 	
 	If Not IsOptionRegistered(Option)
-		PrintUsageErrorText(Option)
+		Debug "Error: Unregistered option ("+Option+")"
+		
+		If UsageErrorTriggers & #ERR_OPTION_NOT_REGISTERED
+			PrintUsageErrorText(Option, "This option doesn't exist.")
+		EndIf
+		
+		ProcedureReturn #False
 	EndIf
 	
-	; TODO: Change this to avoid missing separated value if #ARGV_ANY is used.
 	OptionValueType = GetOptionValueType(Option)
 	
-	If OptionValueType = #ARGV_NONE
-		ArgsValues(Option) = "ERROR.NULLVALUE"
+	If OptionValueType = #ARG_VALUE_NONE
+		ArgsValues(Option) = #OPTION_ERROR_VALUE
+	Else
+		; Used to prevent a second value check if the value was found in joined mode.
+		WasValueRead.b = #False
 		
-	ElseIf OptionValueType = #ARGV_JOINED
-		Debug "Error: Unhandled case used: #ARGV_JOINED"
-		;ElseIf OptionValueType = #ARGV_ANY Or OptionValueType = #ARGV_JOINED
-		;Temporarely deactivated
-		
-	ElseIf OptionValueType = #ARGV_ANY Or OptionValueType = #ARGV_SEPARATED
-		OptionPotValue.s = ProgramParameter()
-		If Len(OptionPotValue) = 0
-			PrintUsageErrorText(Option, "No value found")
-		Else
-			ArgsValues(Option) = OptionPotValue
+		If OptionValueType = #ARG_VALUE_JOINED Or OptionValueType = #ARG_VALUE_ANY
+			If FindString(Option, "=")
+				ArgsValues(Option) = Mid(Option, FindString(Option, "="))
+			Else
+				; No value was found after the equal sign
+				Debug "No joined value found for "+Option
+				
+				If UsageErrorTriggers & #ERR_NO_JOINED_VALUE
+					PrintUsageErrorText(Option, "No value found")
+				EndIf
+				ProcedureReturn #False
+			EndIf
+		EndIf
+		If OptionValueType = #ARG_VALUE_SEPARATED Or (OptionValueType = #ARG_VALUE_ANY And Not WasValueRead)
+			PotentialValue.s = ProgramParameter()
+			
+			If Not Len(PotentialValue)
+				Debug "No separated value found for "+Option
+				If UsageErrorTriggers & #ERR_NO_SEPARATED_VALUE
+					PrintUsageErrorText(Option, "No value found")
+				EndIf
+				ProcedureReturn #False
+			EndIf
+			
+			; TODO: Check if more verifications have to be done.
+			ArgsValues(Option) = PotentialValue
 		EndIf
 	EndIf
+	
+	ProcedureReturn #True
 EndProcedure
 
-Procedure ParseArguments(ParsingMode.b=#ARG_ANY)
+Procedure ParseArguments(ParsingMode.b=#ARG_PREFIX_ANY, UsageErrorTriggers.b = %11111111)
 	ArgumentsParsingMode = ParsingMode
 	
 	While #True
 		CurrentArgument.s = ProgramParameter()
 		
+		; Breaks the while loop when no more arguments are available.
 		If Len(CurrentArgument) = 0
 			Break
 		EndIf
 		
-		If FindString(CurrentArgument, "-")
-			If ArgumentsParsingMode = #ARG_WINDOWS
-				Debug "Wrong prefix used, "+CurrentArgument+" will be ignored (Unix instead of Win)"
-				PrintUsageErrorText(CurrentArgument, "Wrong prefix")
+		If Left(CurrentArgument, 1) = "-"
+			If ArgumentsParsingMode = #ARG_PREFIX_WINDOWS And UsageErrorTriggers & #ERR_WRONG_PREFIX
+				Debug "Wrong prefix used with "+CurrentArgument
+				PrintUsageErrorText(CurrentArgument, "Wrong prefix used")
 			EndIf
 			
-			If FindString(CurrentArgument, "--")
-				ProcessCliOption(LTrim(CurrentArgument, "-"))
+			If Left(CurrentArgument, 2) = "--"
+				ProcessCliOption(LTrim(CurrentArgument, "-"), UsageErrorTriggers)
 			Else
 				; TODO: Utiliser une bool pour ne pas utiliser ProgramParameter() 2 fois et faire tout merder.
+				; What ?
 				For i=1 To Len(CurrentArgument) - 1
-					ProcessCliOption(Mid(CurrentArgument, i+1, 1))
+					ProcessCliOption(Mid(CurrentArgument, i+1, 1), UsageErrorTriggers)
 				Next
 			EndIf
-		ElseIf FindString(CurrentArgument, "/")
-			If ArgumentsParsingMode = #ARG_UNIX
-				Debug "Wrong prefix used, "+CurrentArgument+" will be ignored (Win instead of Unix)"
-				PrintUsageErrorText(CurrentArgument, "Wrong prefix")
+		ElseIf Left(CurrentArgument, 1) = "/"
+			If ArgumentsParsingMode = #ARG_PREFIX_UNIX And UsageErrorTriggers & #ERR_WRONG_PREFIX
+				Debug "Wrong prefix used with "+CurrentArgument
+				PrintUsageErrorText(CurrentArgument, "Wrong prefix used")
 			EndIf
 			
-			ProcessCliOption(LTrim(CurrentArgument, "/"))
+			ProcessCliOption(LTrim(CurrentArgument, "/"), UsageErrorTriggers)
 		Else
 			Debug "Text argument detected"
-			; TODO: Handle this
+			; TODO: Improve this part
+			AddElement(TextArgs())
+			TextArgs() = CurrentArgument
 		EndIf
 	Wend
 EndProcedure
-
 ; IDE Options = PureBasic 5.50 (Windows - x64)
-; CursorPosition = 225
+; CursorPosition = 353
+; FirstLine = 302
 ; Folding = --
 ; EnableXP
 ; EnableUnicode
