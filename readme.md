@@ -8,15 +8,15 @@ This is a "module" that easily let you define, check and use launch arguments in
 
 To define [available] options, you cans use one of these methods:
 ```asm
-; Register an option with both a short and long [flag]
+; Register an option with both a short and long flag
 RegisterCompleteOption(OptShort.s, OptLong.s, OptDesc.s="", OptValue.b=#ARG_VALUE_NONE, OptDefaultValue.s="")
 ```
 ```asm
-; Register an option with a short [flag] only
+; Register an option with a short flag only
 RegisterShortOption(OptShort.s, OptDesc.s="", OptValue.b=#ARG_VALUE_NONE, OptDefaultValue.s="")
 ```
 ```asm
-; Register an option with a long [flag] only
+; Register an option with a long flag only
 RegisterLongOption(OptLong.s, OptDesc.s="", OptValue.b=#ARG_VALUE_NONE, OptDefaultValue.s="")
 ```
 
@@ -34,21 +34,25 @@ RegisterLongOption(OptLong.s, OptDesc.s="", OptValue.b=#ARG_VALUE_NONE, OptDefau
 
 Keep in mind that you will need to call `OpenConsole()` before going further as the following procedure might have to print some text in case something goes wrong.
 
-After registering your options, you can parse the launch arguments with the following function: 
+After registering your options, you can parse the launch arguments with the following procedure: 
 ```asm
-ParseArguments(ParsingMode.b=#ARG_ANY)
+ParseArguments(ParsingMode.b=#ARG_PREFIX_ANY, UsageErrorTriggers.b=%11111111)
 ```
 
 `ParsingMode.b` is used to indicate which type of argument prefix can be used, these are the available options:<br>
-&nbsp;&nbsp;&nbsp;&nbsp;`#ARG_ANY` will parse arguments starting with: "/", "-" or "--"<br>
-&nbsp;&nbsp;&nbsp;&nbsp;`#ARG_UNIX` will parse arguments starting with both "-" and "--"<br>
-&nbsp;&nbsp;&nbsp;&nbsp;`#ARG_WINDOWS` will only parse arguments starting with "/"
+&nbsp;&nbsp;&nbsp;&nbsp;`#ARG_PREFIX_ANY` will parse arguments starting with: "/", "-" or "--"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;`#ARG_PREFIX_UNIX` will parse arguments starting with both "-" and "--"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;`#ARG_PREFIX_WINDOWS` will only parse arguments starting with "/"<br>
+`UsageErrorTriggers.b` is used to enable or disable some verifications that can call the `PrintUsageError()` procedure:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;`#ConstName` doesn't do jack shit.
+
+See [Example?](Example?) for examples
 
 The value of `ParsingMode.b`, or `ArgumentsParsingMode.b` internally/globally, will also influence the way [things will be displayed]<br>
-This value will also influence the way that the defaut help text is displayed if `#ARG_ANY` is used, it will act as if `#ARG_UNIX` was used.
+This value will also influence the way that the defaut help text is displayed if `#ARG_PREFIX_ANY` is used, it will act as if `#ARG_PREFIX_UNIX` was used.
 
 ### Using the damn thing
-And if everything [goes well], you can use these procedures to see if an option is used and the get the value it [holds]:
+And if nothing fails, you can use these procedures to see if an option is used and the get its value:
 
 ```asm
 ; Checks if an option is registered and returns #True or #False accordingly.
@@ -59,14 +63,24 @@ IsOptionRegistered(Option.s)
 ; Checks if an option was in the launch arguments and returns #True or #False accordingly.
 IsOptionUsed(Option.s)
 ```
+Make sure you always call the previous procedure before attempting to get the option's value since the 2 next procedures will end the program if they fail to find one.
 
 ```asm
-; Just returns #False for the moment, might have type-specific procedures later.
-GetOptionValue(Option.s)
+; Returns a pointer to the option's string value.
+GetOptionValuePointer(Option.s)
 ```
 
+```asm
+; Returns a string with the option's value.
+; Calls GetOptionValuePointer(Option.s) internally and handles the pointer stuff.
+GetOptionValue(Option.s)
+```
+See [example-getters.pb](example-getters.pb) to see how to use these procedures and/or the ["Pointers and memory access" help page](https://www.purebasic.com/documentation/reference/memory.html) to see how to get a string from a pointer.
+
 The `Option.s` parameter is the option you want to check or get informations from.<br>
-You can leave the "-" or "/" at the beginning of the option, they will be removed automatically.
+You can leave the "-" or "/" at the beginning of the option, they will be removed automatically. (Avoid this, i don't think it's actually true...)
+
+If [text arguments!!!!!!!]
 
 ### Other procedures
 
@@ -97,14 +111,15 @@ Any launch argument that wasn't considered a flag or value will be put there, so
 
 ### Git-like sub-commands
 
-If you want to use "sub-commands" like in git, you can simply call the "ProgramParameter()" function to check if the first argument is valid.
-If the sub-command is optional, you [check 1st string or use future? method]
-However, you can't reset [the whole thing]
+If you want to use "sub-commands" like in git, you can simply call the "ProgramParameter()" procedure to check if the first argument is a valid command.<br>
+If you decide make the command optional, you might lose some arguments since the "ProgramParameter()" procedure always moves forward.<br>
+See [example-commands.pb](example-commands.pb) for a basic example on how to do it.
 
 ## Planned features
 
 * Possibility to change the PrintUsageError procedure.
 * A better test and examples.
+* Optionnal sub-commands (not losing the first argument)
 
 ## License
 [Apache V2](LICENSE)

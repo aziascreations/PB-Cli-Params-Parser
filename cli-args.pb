@@ -26,14 +26,17 @@
 ;
 
 ; The OptDefaultValue.s in Register[...]Option() could be used if #ARG_VALUE_JOINED is used but no value is given ?
+; Seems good, check if this can causes errors down the line
 
 ; Check if it possible to use a "function pointer" for the help and usage error procedures to be able to change them.
 
 ; TODO: Apply default values to seperated and joined? options that passes the #ERR_NO_JOINED_VALUE.
 
-; TODO: Check every instance of default value, mainly in registerers, to see if they use the new constant.
+; TODO: Check if the "GetOptionValue()" procedure can be copied to return a string an not a pointer.
 
-; URGENT: TODO: Fix the pointer in the GetOptionValue procedure. (Solution should be in the help thingy)
+; TODO: Check if retarded use of joined and separated value with short flags can cause problems.
+
+; TODO: Check with #ARG_VALUE_ANY and short flags, it could cause some errors.
 
 ;
 ;- Variables, structures and constants
@@ -84,6 +87,7 @@ Global ArgumentsParsingMode.b = #ARG_PREFIX_ANY
 Global NewMap ArgsValues.s()
 ; TODO: Trouver un meilleur moyen de faire ça et séparer le mode (1ere position) et les autres à la fin.
 Global NewList TextArgs.s()
+; Useless
 ;Global NewList TextArgsPosition.i()
 
 ;
@@ -129,7 +133,7 @@ Procedure GetOptionValueType(Option.s, FallbackValue.b=#ARG_VALUE_NONE)
 EndProcedure
 
 ; Returns a pointer to the option value
-Procedure GetOptionValue(Option.s)
+Procedure GetOptionValuePointer(Option.s)
 	ForEach ArgsList()
 		If Not (ArgsList()\FlagShort = Option Or ArgsList()\FlagLong = Option)
 			Continue
@@ -144,6 +148,11 @@ Procedure GetOptionValue(Option.s)
 	
 	Debug "No value found for "+Option+", use IsOptionUsed() before."
 	End 1
+EndProcedure
+
+Procedure.s GetOptionValue(Option.s)
+	*OptValue.String = GetOptionValuePointer(Option)
+	ProcedureReturn *OptValue\s
 EndProcedure
 
 ;
@@ -215,7 +224,7 @@ Procedure RegisterShortOption(OptShort.c, OptDesc.s="no-description", OptValue.b
 	ArgsList()\FlagDescription = OptDesc
 	
 	If Not (OptValue = #ARG_VALUE_NONE Or OptValue = #ARG_VALUE_ANY Or OptValue = #ARG_VALUE_JOINED Or OptValue = #ARG_VALUE_SEPARATED)
-		Debug "Error: No ARG_VALUE_* constant used for " + OptShort
+		Debug "Error: No ARG_VALUE_* constant given to register " + OptShort
 		End 1
 	EndIf
 	
@@ -230,7 +239,7 @@ Procedure RegisterLongOption(OptLong.s, OptDesc.s="no-description", OptValue.b=#
 	ArgsList()\FlagDescription = OptDesc
 	
 	If Not (OptValue = #ARG_VALUE_NONE Or OptValue = #ARG_VALUE_ANY Or OptValue = #ARG_VALUE_JOINED Or OptValue = #ARG_VALUE_SEPARATED)
-		Debug "Error: No ARG_VALUE_* constant used for " + OptLong
+		Debug "Error: No ARG_VALUE_* constant given to register " + OptLong
 		End 1
 	EndIf
 	
@@ -245,7 +254,7 @@ Procedure RegisterCompleteOption(OptShort.c, OptLong.s, OptDesc.s="no-descriptio
 	ArgsList()\FlagDescription = OptDesc
 	
 	If Not (OptValue = #ARG_VALUE_NONE Or OptValue = #ARG_VALUE_ANY Or OptValue = #ARG_VALUE_JOINED Or OptValue = #ARG_VALUE_SEPARATED)
-		Debug "Error: No ARG_VALUE_* constant used for " + OptShort + " / " + OptLong
+		Debug "Error: No ARG_VALUE_* constant given to regiister " + OptShort + " / " + OptLong
 		End 1
 	EndIf
 	
@@ -345,16 +354,17 @@ Procedure ParseArguments(ParsingMode.b=#ARG_PREFIX_ANY, UsageErrorTriggers.b = %
 			
 			ProcessCliOption(LTrim(CurrentArgument, "/"), UsageErrorTriggers)
 		Else
-			Debug "Text argument detected"
+			;Debug "Text argument detected"
 			; TODO: Improve this part
 			AddElement(TextArgs())
 			TextArgs() = CurrentArgument
 		EndIf
 	Wend
 EndProcedure
+
 ; IDE Options = PureBasic 5.50 (Windows - x64)
-; CursorPosition = 353
-; FirstLine = 302
-; Folding = --
+; CursorPosition = 356
+; FirstLine = 162
+; Folding = Yg-
 ; EnableXP
 ; EnableUnicode

@@ -42,14 +42,20 @@ If IsOptionUsed("?")
 	Debug "true5 -? or /? is used"
 EndIf
 
+; See the "Pointers" help page to see how to get strings from pointers
 If IsOptionUsed("d")
-	OptValue.i = GetOptionValue("d")
-	Debug "true5 -d or --direction is used -> Value: " + @OptValue
+	*OptValue.String = GetOptionValuePointer("d")
+	Debug "true5 -d or --direction is used -> Value: " + *OptValue\s
 EndIf
 
 If IsOptionUsed("f")
-	OptValue.i = GetOptionValue("f")
-	Debug "true5 -f or --find is used -> Value: " + @OptValue
+	*OptValue.String = GetOptionValuePointer("f")
+	Debug "true5 -f or --find is used -> Value: " + *OptValue\s
+EndIf
+
+If IsOptionUsed("d")
+	OptValue.s = GetOptionValue("d")
+	Debug "" + OptValue
 EndIf
 
 If IsOptionUsed("help")
@@ -59,5 +65,6 @@ EndIf
 Delay(2500)
 
 ; IDE Options = PureBasic 5.50 (Windows - x64)
-; CursorPosition = 2
+; CursorPosition = 51
+; FirstLine = 26
 ; EnableXP
