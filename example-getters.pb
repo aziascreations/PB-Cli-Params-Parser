@@ -25,6 +25,7 @@
 ;      Example that demonstrate the "reading behaviour" of #ARG_VALUE_ANY
 ;      (--drum="Some beats" "I am not a value")
 ;      It always checks if the value is joined and if it isn't it gets the next argument.
+;
 ; ------------------------------------------------------------
 
 ;
@@ -40,7 +41,11 @@ RegisterCompleteOption('b', "bike", "Option with joined value", #ARG_VALUE_JOINE
 RegisterCompleteOption('c', "car", "Option with separated value", #ARG_VALUE_SEPARATED)
 RegisterCompleteOption('d', "drum", "Option with both value type", #ARG_VALUE_ANY)
 
-ParseArguments(#ARG_PREFIX_UNIX)
+; Doesn't work
+;TempCheckDisabler.b = %11111111 | #ERR_EQUAL_SHORT_FLAG
+
+;ParseArguments(#ARG_PREFIX_UNIX)
+ParseArguments(#ARG_PREFIX_ANY)
 
 Debug "Setup complete, starting example..."
 Debug "- - - - - - - - - - - - - - - - - -"
@@ -76,7 +81,26 @@ EndIf
 ;- Example: Reading option values
 ;
 
+; Getting a string value by pointer (Could probably be improved)
+If IsOptionUsed("b")
+	*Pointer.String = GetOptionValuePointer("b")
+	Debug "Pointer value of 'b': " + *Pointer\s	
+EndIf
+
+; Getting a string value directly
+If IsOptionUsed("b")
+	Debug "Direct value of 'b': " + GetOptionValue("b")
+EndIf
+
+If IsOptionUsed("c")
+	Debug "Value of 'c': " + GetOptionValue("c")
+EndIf
+
+If IsOptionUsed("d")
+	Debug "Value of 'd': " + GetOptionValue("d")
+EndIf
 
 ; IDE Options = PureBasic 5.50 (Windows - x64)
-; CursorPosition = 12
+; CursorPosition = 47
+; FirstLine = 34
 ; EnableXP

@@ -7,7 +7,7 @@
   <section name="data">
     <explorer view="" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2017-10-05 16:08" user="Herwin" host="DESKTOP-UAKS81M"/>
+    <lastopen date="2017-10-18 00:24" user="Herwin" host="DESKTOP-UAKS81M"/>
   </section>
   <section name="files">
     <file name="cli-args-test.pb">
@@ -16,15 +16,15 @@
     </file>
     <file name="cli-args.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
-      <fingerprint md5="fea91b44136281af42d4c03c89285a0f"/>
-    </file>
-    <file name="example-getters.pb">
-      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
-      <fingerprint md5="aef6581ca35d6107530db996f8b6ad96"/>
+      <fingerprint md5="77ad499d9382453c2e462efb2aee7aea"/>
     </file>
     <file name="example-commands.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+"/>
       <fingerprint md5="26caf28b79b7a649b8e7d1bbdd9ded48"/>
+    </file>
+    <file name="example-getters.pb">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
+      <fingerprint md5="03d17c5b43d825515d02d13533a378df"/>
     </file>
   </section>
   <section name="targets">
@@ -36,7 +36,7 @@
       <options unicode="1" debug="1"/>
       <format exe="console" cpu="0"/>
     </target>
-    <target name="Testing Target" enabled="1" default="1">
+    <target name="Testing Target" enabled="1" default="0">
       <inputfile value="cli-args-test.pb"/>
       <outputfile value="cli-args-test.exe"/>
       <compiler version="PureBasic 5.50 (Windows - x64)"/>
@@ -99,6 +99,15 @@
       <compiler version="PureBasic 5.50 (Windows - x64)"/>
       <commandline value="--drum=&quot;Some beats&quot; &quot;I am not a value&quot;"/>
       <executable value="cli-args-temp.exe"/>
+      <options debug="1"/>
+      <temporaryexe value="source"/>
+      <format exe="console" cpu="0"/>
+    </target>
+    <target name="ex-getters-windows" enabled="0" default="1">
+      <inputfile value="example-getters.pb"/>
+      <outputfile value="cli-args-temp.exe"/>
+      <compiler version="PureBasic 5.50 (Windows - x64)"/>
+      <commandline value="/b=&quot;Hello&quot;"/>
       <options debug="1"/>
       <temporaryexe value="source"/>
       <format exe="console" cpu="0"/>

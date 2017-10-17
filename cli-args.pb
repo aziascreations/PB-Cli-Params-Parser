@@ -38,6 +38,17 @@
 
 ; TODO: Check with #ARG_VALUE_ANY and short flags, it could cause some errors.
 
+; ERROR: TODO: Fix the joined value parser
+; NOTE: This bug might still exist in the Windows "/" part
+; TODO: Use a regex to check if a short flag group thingy with an equal sign has one or more flags (-j=4 OK & -ad=2 NOT OK)
+; Even long ones with joined shit fuck up
+
+; DONE: Fixed the unix part in the ParseArguments procedure.
+; DONE: Separated the value part from joined thing.
+
+; TODO: Séparer les #ERR et les garder en mémoire pour si #Null$ est repris dans la valeur d'une option demandées.
+;  Et y faire une référence claire dans le readme.
+
 ;
 ;- Variables, structures and constants
 ;
@@ -50,16 +61,15 @@ Structure CliArg
 	DefaultValue.s
 EndStructure
 
-; Used to indicate what kind of prefix can be used.
+; Prefixes and value constants are grouped to avoid "mismatch" errors
 Enumeration
+	; Used to indicate what kind of prefix can be used.
 	#ARG_PREFIX_ANY
 	#ARG_PREFIX_WINDOWS
 	#ARG_PREFIX_UNIX
-EndEnumeration
-
-; Used to indicate how the value of the parameter can be entered.
-; If the short one is used, the next argument will always be used.
-Enumeration
+	
+	; Used to indicate how the value of the parameter can be entered.
+	; If the short one is used, the next argument will always be used.
 	#ARG_VALUE_NONE
 	#ARG_VALUE_ANY
 	#ARG_VALUE_JOINED
@@ -72,11 +82,13 @@ Enumeration
 	#ERR_OPTION_NOT_REGISTERED = %00000010
 	#ERR_NO_JOINED_VALUE = %00000100
 	#ERR_NO_SEPARATED_VALUE = %00001000
-	#ERR_UNKNOWN = %00010000
+	#ERR_EQUAL_SHORT_FLAG = %00010000
+	#ERR_UNKNOWN = %00100000
 EndEnumeration
 
 ; This value is given to every option that shouldn't have one so it can be easily checked if you use GetOptionValue
 ;  on one that uses #ARG_VALUE_NONE.
+; TODO: Change to #Null$
 #OPTION_ERROR_VALUE = "You Done Fucked Up Now!!"
 
 Global NewList ArgsList.CliArg()
@@ -89,6 +101,11 @@ Global NewMap ArgsValues.s()
 Global NewList TextArgs.s()
 ; Useless
 ;Global NewList TextArgsPosition.i()
+
+; Can be deleted...
+;Debug "Registering regex for short flags with joined values"
+; Can i it be done without it ?
+;RegexTemp.s="^\-[a-zA-Z]\="
 
 ;
 ;- Procedures: Helpers & Getters
@@ -120,6 +137,8 @@ Procedure IsOptionUsed(Option.s)
 	ProcedureReturn #False
 EndProcedure
 
+; TODO: Throw some error if the options has no value, or just return null.
+;  If you run into this error, you should fix your shit i guess.
 Procedure GetOptionValueType(Option.s, FallbackValue.b=#ARG_VALUE_NONE)
 	ForEach ArgsList()
 		If Not (ArgsList()\FlagShort = Option Or ArgsList()\FlagLong = Option)
@@ -270,6 +289,13 @@ EndProcedure
 Procedure ProcessCliOption(Option.s, UsageErrorTriggers.b)
 	Debug "Processing: "+Option
 	
+	Value.s = #Null$
+	If FindString(Option, "=")
+		Value = Mid(Option, FindString(Option, "=")+1)
+		Option = Left(Option, Len(Option)-Len(Value)-1)
+	EndIf
+	;Debug Option+" ->"+Value
+	
 	If Not IsOptionRegistered(Option)
 		Debug "Error: Unregistered option ("+Option+")"
 		
@@ -283,15 +309,18 @@ Procedure ProcessCliOption(Option.s, UsageErrorTriggers.b)
 	OptionValueType = GetOptionValueType(Option)
 	
 	If OptionValueType = #ARG_VALUE_NONE
+		; TODO: Replace it with #Null$ ?
 		ArgsValues(Option) = #OPTION_ERROR_VALUE
 	Else
 		; Used to prevent a second value check if the value was found in joined mode.
 		WasValueRead.b = #False
 		
+		; TODO: The bug mentionned on top is still not fixed.
+		
 		If OptionValueType = #ARG_VALUE_JOINED Or OptionValueType = #ARG_VALUE_ANY
 			If FindString(Option, "=")
 				ArgsValues(Option) = Mid(Option, FindString(Option, "="))
-			Else
+			ElseIf Len(Option) <> 1
 				; No value was found after the equal sign
 				Debug "No joined value found for "+Option
 				
@@ -299,6 +328,8 @@ Procedure ProcessCliOption(Option.s, UsageErrorTriggers.b)
 					PrintUsageErrorText(Option, "No value found")
 				EndIf
 				ProcedureReturn #False
+			Else
+				Debug "Skipped joined value check for short flag ("+Option+")."
 			EndIf
 		EndIf
 		If OptionValueType = #ARG_VALUE_SEPARATED Or (OptionValueType = #ARG_VALUE_ANY And Not WasValueRead)
@@ -321,32 +352,69 @@ Procedure ProcessCliOption(Option.s, UsageErrorTriggers.b)
 EndProcedure
 
 Procedure ParseArguments(ParsingMode.b=#ARG_PREFIX_ANY, UsageErrorTriggers.b = %11111111)
+	; TODO: Check if the parsing mode thingy is correct
+	
 	ArgumentsParsingMode = ParsingMode
 	
 	While #True
 		CurrentArgument.s = ProgramParameter()
 		
+		;Debug CurrentArgument
+		
 		; Breaks the while loop when no more arguments are available.
-		If Len(CurrentArgument) = 0
+		If Not Len(CurrentArgument)
 			Break
 		EndIf
 		
 		If Left(CurrentArgument, 1) = "-"
+			; #ARG_PREFIX_UNIX section
 			If ArgumentsParsingMode = #ARG_PREFIX_WINDOWS And UsageErrorTriggers & #ERR_WRONG_PREFIX
 				Debug "Wrong prefix used with "+CurrentArgument
 				PrintUsageErrorText(CurrentArgument, "Wrong prefix used")
 			EndIf
 			
+
 			If Left(CurrentArgument, 2) = "--"
+				; Long flag part
 				ProcessCliOption(LTrim(CurrentArgument, "-"), UsageErrorTriggers)
 			Else
 				; TODO: Utiliser une bool pour ne pas utiliser ProgramParameter() 2 fois et faire tout merder.
-				; What ?
-				For i=1 To Len(CurrentArgument) - 1
-					ProcessCliOption(Mid(CurrentArgument, i+1, 1), UsageErrorTriggers)
-				Next
+				; Probablement dans un cas de double mini flags à valeurs séparés...
+				; A faire plus tard, si l'utilisateur est un con, je peux pas mettre des barrières partout...
+				
+				; TODO: Fix the bug with (-j=4)
+				; DONE: Most likely fixed here, there is still something in the "ProcessCliOption" procedure to fix.
+				
+				; Short flag part
+				If FindString(CurrentArgument, "=")
+					Debug "Treating "+CurrentArgument+" as a long flag. (= sign)"
+					
+					If Not FindString(CurrentArgument, "=") = 3 And UsageErrorTriggers & #ERR_EQUAL_SHORT_FLAG 
+						PrintUsageErrorText(CurrentArgument, "Joined value given with multiple short flags.")
+					Else
+						ProcessCliOption(LTrim(CurrentArgument, "-"), UsageErrorTriggers)
+					EndIf
+				Else
+					Debug "Treating "+CurrentArgument+" as short flags. (no = sign)"
+					
+					For i=1 To Len(CurrentArgument) - 1
+						ProcessCliOption(Mid(CurrentArgument, i+1, 1), UsageErrorTriggers)
+					Next
+				EndIf
+				
+; 				For i=1 To Len(CurrentArgument) - 1
+; 					;If Not FindString(CurrentArgument)
+; 					
+; 					If Mid(CurrentArgument, i+1, 1) = "=" And UsageErrorTriggers & #ERR_EQUAL_SHORT_FLAG
+; 						Debug "Error: Attempted to use a joined value with a short flag"
+; 						PrintUsageErrorText(CurrentArgument, "TMP: Value given with short flags")
+; 					Else
+; 						ProcessCliOption(Mid(CurrentArgument, i+1, 1), UsageErrorTriggers)
+; 					EndIf
+; 				Next
 			EndIf
 		ElseIf Left(CurrentArgument, 1) = "/"
+			; #ARG_PREFIX_WINDOWS section
 			If ArgumentsParsingMode = #ARG_PREFIX_UNIX And UsageErrorTriggers & #ERR_WRONG_PREFIX
 				Debug "Wrong prefix used with "+CurrentArgument
 				PrintUsageErrorText(CurrentArgument, "Wrong prefix used")
@@ -356,6 +424,7 @@ Procedure ParseArguments(ParsingMode.b=#ARG_PREFIX_ANY, UsageErrorTriggers.b = %
 		Else
 			;Debug "Text argument detected"
 			; TODO: Improve this part
+			; Why, it look good enough, you need to take more detailed notes for christ sake...
 			AddElement(TextArgs())
 			TextArgs() = CurrentArgument
 		EndIf
@@ -363,8 +432,8 @@ Procedure ParseArguments(ParsingMode.b=#ARG_PREFIX_ANY, UsageErrorTriggers.b = %
 EndProcedure
 
 ; IDE Options = PureBasic 5.50 (Windows - x64)
-; CursorPosition = 356
-; FirstLine = 162
-; Folding = Yg-
+; CursorPosition = 66
+; FirstLine = 188
+; Folding = Aw-
 ; EnableXP
 ; EnableUnicode
