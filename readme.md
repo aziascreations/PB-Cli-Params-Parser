@@ -30,9 +30,13 @@ RegisterLongOption(OptLong.s, OptDesc.s="", OptValue.b=#ARG_VALUE_NONE, OptDefau
 &nbsp;&nbsp;&nbsp;&nbsp;`#ARG_VALUE_SEPARATED` will only read values separated from the flag<br>
 `OptDefaultValue.s` - Default value of the option (Unused, will throw an error if no value is given)
 
+**Warning**:<br>
+When using `#ARG_VALUE_SEPARATED` and `#ARG_VALUE_ANY`, you have to be carefull to how the user uses the values as they can lead to some bugs.<br>
+See [example-getters.pb](example-getters.pb) 6th and 7th case for examples.
+
 ### Parsing launch arguments
 
-Keep in mind that you will need to call `OpenConsole()` before going further as the following procedure might have to print some text in case something goes wrong.
+Keep in mind that you will need to call `OpenConsole()` before going further as the following procedures might have to print some text in case something goes wrong.
 
 After registering your options, you can parse the launch arguments with the following procedure: 
 ```asm
@@ -40,16 +44,21 @@ ParseArguments(ParsingMode.b=#ARG_PREFIX_ANY, UsageErrorTriggers.b=%11111111)
 ```
 
 `ParsingMode.b` is used to indicate which type of argument prefix can be used, these are the available options:<br>
-&nbsp;&nbsp;&nbsp;&nbsp;`#ARG_PREFIX_ANY` will parse arguments starting with: "/", "-" or "--"<br>
-&nbsp;&nbsp;&nbsp;&nbsp;`#ARG_PREFIX_UNIX` will parse arguments starting with both "-" and "--"<br>
-&nbsp;&nbsp;&nbsp;&nbsp;`#ARG_PREFIX_WINDOWS` will only parse arguments starting with "/"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;`#ARG_PREFIX_ANY`: Will parse arguments starting with: "/", "-" or "--"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;`#ARG_PREFIX_UNIX`: Will parse arguments starting with both "-" and "--"<br>
+&nbsp;&nbsp;&nbsp;&nbsp;`#ARG_PREFIX_WINDOWS`: Will only parse arguments starting with "/"<br><br>
 `UsageErrorTriggers.b` is used to enable or disable some verifications that can call the `PrintUsageError()` procedure:<br>
-&nbsp;&nbsp;&nbsp;&nbsp;`#ConstName` doesn't do jack shit.
+&nbsp;&nbsp;&nbsp;&nbsp;`#ERR_WRONG_PREFIX`: Trigerred when a wrong argument prefix is used<br>
+&nbsp;&nbsp;&nbsp;&nbsp;`#ERR_OPTION_NOT_REGISTERED`: ???<br>
+&nbsp;&nbsp;&nbsp;&nbsp;`#ERR_NO_JOINED_VALUE`: Trigerred when no joined value was found.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;`#ERR_NO_SEPARATED_VALUE`: Trigerred when no separated value was found.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;`#ERR_EQUAL_SHORT_FLAG`: ???
 
-See [Example?](Example?) for examples
+See ~~[example-parser.pb](#nope)~~ for examples. (Not done yet)
 
 The value of `ParsingMode.b`, or `ArgumentsParsingMode.b` internally/globally, will also influence the way [things will be displayed]<br>
-This value will also influence the way that the defaut help text is displayed if `#ARG_PREFIX_ANY` is used, it will act as if `#ARG_PREFIX_UNIX` was used.
+This value will also influence the way that the defaut help text is displayed if `#ARG_PREFIX_ANY` is used, it will act as if `#ARG_PREFIX_UNIX` was used.<br>
+Please ignore the last 2 setences, they are wrong...
 
 ### Using the damn thing
 And if nothing fails, you can use these procedures to see if an option is used and the get its value:

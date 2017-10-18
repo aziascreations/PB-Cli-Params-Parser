@@ -38,13 +38,7 @@
 
 ; TODO: Check with #ARG_VALUE_ANY and short flags, it could cause some errors.
 
-; ERROR: TODO: Fix the joined value parser
-; NOTE: This bug might still exist in the Windows "/" part
-; TODO: Use a regex to check if a short flag group thingy with an equal sign has one or more flags (-j=4 OK & -ad=2 NOT OK)
-; Even long ones with joined shit fuck up
-
-; DONE: Fixed the unix part in the ParseArguments procedure.
-; DONE: Separated the value part from joined thing.
+; TODO: Make sure that arguments can't be counted as values for other ones (ex-getters-6)
 
 ; TODO: Séparer les #ERR et les garder en mémoire pour si #Null$ est repris dans la valeur d'une option demandées.
 ;  Et y faire une référence claire dans le readme.
@@ -89,7 +83,7 @@ EndEnumeration
 ; This value is given to every option that shouldn't have one so it can be easily checked if you use GetOptionValue
 ;  on one that uses #ARG_VALUE_NONE.
 ; TODO: Change to #Null$
-#OPTION_ERROR_VALUE = "You Done Fucked Up Now!!"
+;#OPTION_ERROR_VALUE = "You Done Fucked Up Now!!"
 
 Global NewList ArgsList.CliArg()
 Global ArgumentsParsingMode.b = #ARG_PREFIX_ANY
@@ -101,11 +95,6 @@ Global NewMap ArgsValues.s()
 Global NewList TextArgs.s()
 ; Useless
 ;Global NewList TextArgsPosition.i()
-
-; Can be deleted...
-;Debug "Registering regex for short flags with joined values"
-; Can i it be done without it ?
-;RegexTemp.s="^\-[a-zA-Z]\="
 
 ;
 ;- Procedures: Helpers & Getters
@@ -293,8 +282,8 @@ Procedure ProcessCliOption(Option.s, UsageErrorTriggers.b)
 	If FindString(Option, "=")
 		Value = Mid(Option, FindString(Option, "=")+1)
 		Option = Left(Option, Len(Option)-Len(Value)-1)
+		;Debug Option+" ->"+Value
 	EndIf
-	;Debug Option+" ->"+Value
 	
 	If Not IsOptionRegistered(Option)
 		Debug "Error: Unregistered option ("+Option+")"
@@ -309,29 +298,24 @@ Procedure ProcessCliOption(Option.s, UsageErrorTriggers.b)
 	OptionValueType = GetOptionValueType(Option)
 	
 	If OptionValueType = #ARG_VALUE_NONE
-		; TODO: Replace it with #Null$ ?
-		ArgsValues(Option) = #OPTION_ERROR_VALUE
+		ArgsValues(Option) = #Null$
 	Else
 		; Used to prevent a second value check if the value was found in joined mode.
 		WasValueRead.b = #False
 		
-		; TODO: The bug mentionned on top is still not fixed.
-		
 		If OptionValueType = #ARG_VALUE_JOINED Or OptionValueType = #ARG_VALUE_ANY
-			If FindString(Option, "=")
-				ArgsValues(Option) = Mid(Option, FindString(Option, "="))
-			ElseIf Len(Option) <> 1
-				; No value was found after the equal sign
-				Debug "No joined value found for "+Option
-				
-				If UsageErrorTriggers & #ERR_NO_JOINED_VALUE
-					PrintUsageErrorText(Option, "No value found")
-				EndIf
-				ProcedureReturn #False
+			If Value <> #Null$
+				ArgsValues(Option) = Value
+				WasValueRead = #True
 			Else
-				Debug "Skipped joined value check for short flag ("+Option+")."
+				If OptionValueType = #ARG_VALUE_ANY
+					Debug "Skipped joined value check for short flag ("+Option+")."
+				ElseIf UsageErrorTriggers & #ERR_NO_JOINED_VALUE
+					PrintUsageErrorText(Option, "No joined value found for "+Option+".")
+				EndIf
 			EndIf
 		EndIf
+		
 		If OptionValueType = #ARG_VALUE_SEPARATED Or (OptionValueType = #ARG_VALUE_ANY And Not WasValueRead)
 			PotentialValue.s = ProgramParameter()
 			
@@ -382,12 +366,9 @@ Procedure ParseArguments(ParsingMode.b=#ARG_PREFIX_ANY, UsageErrorTriggers.b = %
 				; Probablement dans un cas de double mini flags à valeurs séparés...
 				; A faire plus tard, si l'utilisateur est un con, je peux pas mettre des barrières partout...
 				
-				; TODO: Fix the bug with (-j=4)
-				; DONE: Most likely fixed here, there is still something in the "ProcessCliOption" procedure to fix.
-				
 				; Short flag part
 				If FindString(CurrentArgument, "=")
-					Debug "Treating "+CurrentArgument+" as a long flag. (= sign)"
+					Debug "Treating "+CurrentArgument+" as a single long flag. (= sign)"
 					
 					If Not FindString(CurrentArgument, "=") = 3 And UsageErrorTriggers & #ERR_EQUAL_SHORT_FLAG 
 						PrintUsageErrorText(CurrentArgument, "Joined value given with multiple short flags.")
@@ -395,23 +376,12 @@ Procedure ParseArguments(ParsingMode.b=#ARG_PREFIX_ANY, UsageErrorTriggers.b = %
 						ProcessCliOption(LTrim(CurrentArgument, "-"), UsageErrorTriggers)
 					EndIf
 				Else
-					Debug "Treating "+CurrentArgument+" as short flags. (no = sign)"
+					Debug "Treating "+CurrentArgument+" as a group of short flags. (no = sign)"
 					
 					For i=1 To Len(CurrentArgument) - 1
 						ProcessCliOption(Mid(CurrentArgument, i+1, 1), UsageErrorTriggers)
 					Next
 				EndIf
-				
-; 				For i=1 To Len(CurrentArgument) - 1
-; 					;If Not FindString(CurrentArgument)
-; 					
-; 					If Mid(CurrentArgument, i+1, 1) = "=" And UsageErrorTriggers & #ERR_EQUAL_SHORT_FLAG
-; 						Debug "Error: Attempted to use a joined value with a short flag"
-; 						PrintUsageErrorText(CurrentArgument, "TMP: Value given with short flags")
-; 					Else
-; 						ProcessCliOption(Mid(CurrentArgument, i+1, 1), UsageErrorTriggers)
-; 					EndIf
-; 				Next
 			EndIf
 		ElseIf Left(CurrentArgument, 1) = "/"
 			; #ARG_PREFIX_WINDOWS section
@@ -432,8 +402,8 @@ Procedure ParseArguments(ParsingMode.b=#ARG_PREFIX_ANY, UsageErrorTriggers.b = %
 EndProcedure
 
 ; IDE Options = PureBasic 5.50 (Windows - x64)
-; CursorPosition = 66
-; FirstLine = 188
-; Folding = Aw-
+; CursorPosition = 48
+; FirstLine = 87
+; Folding = gw-
 ; EnableXP
 ; EnableUnicode

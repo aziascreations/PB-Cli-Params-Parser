@@ -7,7 +7,7 @@
   <section name="data">
     <explorer view="" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2017-10-18 00:24" user="Herwin" host="DESKTOP-UAKS81M"/>
+    <lastopen date="2017-10-18 13:05" user="Herwin" host="DESKTOP-UAKS81M"/>
   </section>
   <section name="files">
     <file name="cli-args-test.pb">
@@ -16,7 +16,7 @@
     </file>
     <file name="cli-args.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
-      <fingerprint md5="77ad499d9382453c2e462efb2aee7aea"/>
+      <fingerprint md5="d35bb808628f4244ceaad3faa2456329"/>
     </file>
     <file name="example-commands.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+"/>
@@ -24,11 +24,11 @@
     </file>
     <file name="example-getters.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
-      <fingerprint md5="03d17c5b43d825515d02d13533a378df"/>
+      <fingerprint md5="e96ef869adda00c139a5087f92e5c8c8"/>
     </file>
   </section>
   <section name="targets">
-    <target name="Main Target" enabled="1" default="0">
+    <target name="Main Target" enabled="1" default="1">
       <inputfile value="cli-args.pb"/>
       <outputfile value="cli-args"/>
       <compiler version="PureBasic 5.50 (Windows - x64)"/>
@@ -103,11 +103,22 @@
       <temporaryexe value="source"/>
       <format exe="console" cpu="0"/>
     </target>
-    <target name="ex-getters-windows" enabled="0" default="1">
+    <target name="ex-getters-6" enabled="0" default="0">
       <inputfile value="example-getters.pb"/>
       <outputfile value="cli-args-temp.exe"/>
       <compiler version="PureBasic 5.50 (Windows - x64)"/>
-      <commandline value="/b=&quot;Hello&quot;"/>
+      <commandline value="-d -b=123"/>
+      <executable value="t.exe"/>
+      <options debug="1"/>
+      <temporaryexe value="source"/>
+      <format exe="console" cpu="0"/>
+    </target>
+    <target name="ex-getters-7" enabled="0" default="0">
+      <inputfile value="example-getters.pb"/>
+      <outputfile value="cli-args-temp.exe"/>
+      <compiler version="PureBasic 5.50 (Windows - x64)"/>
+      <commandline value="-cd cat dog"/>
+      <executable value="t.exe"/>
       <options debug="1"/>
       <temporaryexe value="source"/>
       <format exe="console" cpu="0"/>
