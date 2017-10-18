@@ -7,20 +7,28 @@
   <section name="data">
     <explorer view="" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2017-09-27 12:11" user="Herwin" host="DESKTOP-UAKS81M"/>
+    <lastopen date="2017-10-18 13:05" user="Herwin" host="DESKTOP-UAKS81M"/>
   </section>
   <section name="files">
     <file name="cli-args-test.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
-      <fingerprint md5="d356d6686262ff1fb2c2f4c96782c5f6"/>
+      <fingerprint md5="98eb15af5c8cdcfb8317ee49e65697f9"/>
     </file>
     <file name="cli-args.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
-      <fingerprint md5="ee94723bcc243ad46d5de77b23c62b0b"/>
+      <fingerprint md5="d35bb808628f4244ceaad3faa2456329"/>
+    </file>
+    <file name="example-commands.pb">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+"/>
+      <fingerprint md5="26caf28b79b7a649b8e7d1bbdd9ded48"/>
+    </file>
+    <file name="example-getters.pb">
+      <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
+      <fingerprint md5="e96ef869adda00c139a5087f92e5c8c8"/>
     </file>
   </section>
   <section name="targets">
-    <target name="Main Target" enabled="1" default="0">
+    <target name="Main Target" enabled="1" default="1">
       <inputfile value="cli-args.pb"/>
       <outputfile value="cli-args"/>
       <compiler version="PureBasic 5.50 (Windows - x64)"/>
@@ -28,13 +36,91 @@
       <options unicode="1" debug="1"/>
       <format exe="console" cpu="0"/>
     </target>
-    <target name="Testing Target" enabled="1" default="1">
+    <target name="Testing Target" enabled="1" default="0">
       <inputfile value="cli-args-test.pb"/>
       <outputfile value="cli-args-test.exe"/>
       <compiler version="PureBasic 5.50 (Windows - x64)"/>
-      <commandline value="--help -d &quot;up the street&quot; -ac /eclipse /? test.txt"/>
+      <commandline value="--help -d &quot;up the street&quot; -bf &quot;You found some air&quot; -ac /eclipse /? test.txt"/>
       <executable value="cli-args-test.exe"/>
       <options debug="1"/>
+      <temporaryexe value="source"/>
+      <format exe="console" cpu="0"/>
+    </target>
+    <target name="ex-template" enabled="0" default="0">
+      <inputfile value="example-getters.pb"/>
+      <outputfile value="cli-args-temp.exe"/>
+      <compiler version="PureBasic 5.50 (Windows - x64)"/>
+      <options debug="1"/>
+      <temporaryexe value="source"/>
+      <format exe="console" cpu="0"/>
+    </target>
+    <target name="ex-getters-1" enabled="0" default="0">
+      <inputfile value="example-getters.pb"/>
+      <outputfile value="cli-args-temp.exe"/>
+      <compiler version="PureBasic 5.50 (Windows - x64)"/>
+      <commandline value="-a"/>
+      <options debug="1"/>
+      <temporaryexe value="source"/>
+      <format exe="console" cpu="0"/>
+    </target>
+    <target name="ex-getters-2" enabled="0" default="0">
+      <inputfile value="example-getters.pb"/>
+      <outputfile value="cli-args-temp.exe"/>
+      <compiler version="PureBasic 5.50 (Windows - x64)"/>
+      <commandline value="&quot;Some text&quot; fileName.txt D:\Test ./relative/path"/>
+      <executable value="cli-args-temp.exe"/>
+      <options debug="1"/>
+      <temporaryexe value="source"/>
+      <format exe="console" cpu="0"/>
+    </target>
+    <target name="ex-getters-3" enabled="0" default="0">
+      <inputfile value="example-getters.pb"/>
+      <outputfile value="cli-args-temp.exe"/>
+      <compiler version="PureBasic 5.50 (Windows - x64)"/>
+      <commandline value="-b=&quot;Hello World!&quot; --drum=3.14"/>
+      <executable value="cli-args-temp.exe"/>
+      <options debug="1"/>
+      <temporaryexe value="source"/>
+      <format exe="console" cpu="0"/>
+    </target>
+    <target name="ex-getters-4" enabled="0" default="0">
+      <inputfile value="example-getters.pb"/>
+      <outputfile value="cli-args-temp.exe"/>
+      <compiler version="PureBasic 5.50 (Windows - x64)"/>
+      <commandline value="-c &quot;Hello World!&quot; -ad 3.14"/>
+      <executable value="cli-args-temp.exe"/>
+      <options debug="1"/>
+      <temporaryexe value="source"/>
+      <format exe="console" cpu="0"/>
+    </target>
+    <target name="ex-getters-5" enabled="0" default="0">
+      <inputfile value="example-getters.pb"/>
+      <outputfile value="cli-args-temp.exe"/>
+      <compiler version="PureBasic 5.50 (Windows - x64)"/>
+      <commandline value="--drum=&quot;Some beats&quot; &quot;I am not a value&quot;"/>
+      <executable value="cli-args-temp.exe"/>
+      <options debug="1"/>
+      <temporaryexe value="source"/>
+      <format exe="console" cpu="0"/>
+    </target>
+    <target name="ex-getters-6" enabled="0" default="0">
+      <inputfile value="example-getters.pb"/>
+      <outputfile value="cli-args-temp.exe"/>
+      <compiler version="PureBasic 5.50 (Windows - x64)"/>
+      <commandline value="-d -b=123"/>
+      <executable value="t.exe"/>
+      <options debug="1"/>
+      <temporaryexe value="source"/>
+      <format exe="console" cpu="0"/>
+    </target>
+    <target name="ex-getters-7" enabled="0" default="0">
+      <inputfile value="example-getters.pb"/>
+      <outputfile value="cli-args-temp.exe"/>
+      <compiler version="PureBasic 5.50 (Windows - x64)"/>
+      <commandline value="-cd cat dog"/>
+      <executable value="t.exe"/>
+      <options debug="1"/>
+      <temporaryexe value="source"/>
       <format exe="console" cpu="0"/>
     </target>
   </section>
