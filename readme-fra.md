@@ -1,22 +1,25 @@
-﻿<h1>
+<h1>
+	<!--<a href="" title="English">
+		<img align="left" height="48px" src="https://i.imgur.com/s416Gjv.png" alt="PureBasic">
+	</a>-->
 	cli-args-pb
 	<a href="readme.md" title="English">
-		<!--<img align="right" height="32px" src="https://i.imgur.com/YjJ8Syw.png" alt="English">-->
-		<img align="right" height="32px" src="https://i.imgur.com/Tnb1YyP.png" alt="English (Current)">
+		<img align="right" height="32px" src="https://i.imgur.com/YjJ8Syw.png" alt="English">
+		<!--<img align="right" height="32px" src="https://i.imgur.com/Tnb1YyP.png" alt="English (Current)">-->
 	</a>
 	<a href="readme-fra.md" title="French">
-		<img align="right" height="32px" src="https://i.imgur.com/ablvR3p.png" alt="French">
-		<!--<img align="right" height="32px" src="https://i.imgur.com/GBx717J.png" alt="French (???)">-->
+		<!--<img align="right" height="32px" src="https://i.imgur.com/ablvR3p.png" alt="French">-->
+		<img align="right" height="32px" src="https://i.imgur.com/GBx717J.png" alt="French (???)">
 	</a>
 </h1>
 
-This is a "module" that easily let you define, check and use launch arguments in your console application in PureBasic.
+Ce module vous permet de facilement définir, vérifier et utiliser des options de lancement pour vos applications en PureBasic.
 
-## Usage
+## Utilisation
 
-### Defining/Declaring options
+### Déclaration d'options
 
-To define [available] options, you can use one of these methods:
+Pour déclarer des options, vous devez utiliser une des procédures suivantes:
 ```asm
 ; Register an option with both a short and long flag
 RegisterCompleteOption(OptShort.s, OptLong.s, OptDesc.s="", OptValue.b=#ARG_VALUE_NONE, OptDefaultValue.s="")

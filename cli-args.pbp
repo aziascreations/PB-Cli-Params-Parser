@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.50 (Windows - x64)">
+<project xmlns="http://www.purebasic.com/namespace" version="1.0" creator="PureBasic 5.60 (Windows - x86)">
   <section name="config">
     <options closefiles="1" openmode="0" name="cli-args"/>
   </section>
   <section name="data">
     <explorer view="" pattern="0"/>
     <log show="1"/>
-    <lastopen date="2017-10-18 13:05" user="Herwin" host="DESKTOP-UAKS81M"/>
+    <lastopen date="2017-12-02 13:09" user="Herwin" host="DESKTOP-UAKS81M"/>
   </section>
   <section name="files">
     <file name="cli-args-test.pb">
@@ -16,7 +16,7 @@
     </file>
     <file name="cli-args.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="1" panelstate="+"/>
-      <fingerprint md5="d35bb808628f4244ceaad3faa2456329"/>
+      <fingerprint md5="0e25a76d30af4a7852bc2db0f392fb6f"/>
     </file>
     <file name="example-commands.pb">
       <config load="0" scan="1" panel="1" warn="1" lastopen="0" panelstate="+"/>
@@ -28,7 +28,7 @@
     </file>
   </section>
   <section name="targets">
-    <target name="Main Target" enabled="1" default="1">
+    <target name="Main Target" enabled="1" default="0">
       <inputfile value="cli-args.pb"/>
       <outputfile value="cli-args"/>
       <compiler version="PureBasic 5.50 (Windows - x64)"/>
@@ -93,10 +93,10 @@
       <temporaryexe value="source"/>
       <format exe="console" cpu="0"/>
     </target>
-    <target name="ex-getters-5" enabled="0" default="0">
+    <target name="ex-getters-5" enabled="0" default="1">
       <inputfile value="example-getters.pb"/>
       <outputfile value="cli-args-temp.exe"/>
-      <compiler version="PureBasic 5.50 (Windows - x64)"/>
+      <compiler version="PureBasic 5.60 (Windows - x64)"/>
       <commandline value="--drum=&quot;Some beats&quot; &quot;I am not a value&quot;"/>
       <executable value="cli-args-temp.exe"/>
       <options debug="1"/>

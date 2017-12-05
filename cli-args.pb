@@ -58,16 +58,20 @@ EndStructure
 ; Prefixes and value constants are grouped to avoid "mismatch" errors
 Enumeration
 	; Used to indicate what kind of prefix can be used.
-	#ARG_PREFIX_ANY
-	#ARG_PREFIX_WINDOWS
-	#ARG_PREFIX_UNIX
+	#ARG_PREFIX_ANY = %11
+	#ARG_PREFIX_WINDOWS = %10
+	#ARG_PREFIX_UNIX = %01
 	
 	; Used to indicate how the value of the parameter can be entered.
 	; If the short one is used, the next argument will always be used.
-	#ARG_VALUE_NONE
-	#ARG_VALUE_ANY
-	#ARG_VALUE_JOINED
-	#ARG_VALUE_SEPARATED
+	#ARG_VALUE_NONE = %00000001
+	#ARG_VALUE_ANY = %00000010
+	#ARG_VALUE_JOINED = %00000100
+	#ARG_VALUE_SEPARATED = %00001000
+	#ARG_VALUE_OTIONAL = %00010000
+	
+	; TODO: Implement this.
+	#ARG_PROPERTY_HIDDEN = %00100000
 EndEnumeration
 
 ; Used to enable and disable some triggers for the PrintUsageError procedure
@@ -211,9 +215,9 @@ Procedure PrintUsageErrorText(Option.s, Reason.s="")
 	EndIf
 	PrintN("")
 	
-	If IsOptionRegistered("help") And (ArgumentsParsingMode = #ARG_PREFIX_ANY Or ArgumentsParsingMode = #ARG_PREFIX_UNIX)
+	If IsOptionRegistered("help") And (ArgumentsParsingMode & #ARG_PREFIX_UNIX)
 		PrintN("Use --help to see available options")
-	ElseIf IsOptionRegistered("?") And (ArgumentsParsingMode = #ARG_PREFIX_ANY Or ArgumentsParsingMode = #ARG_PREFIX_WINDOWS)
+	ElseIf IsOptionRegistered("?") And (ArgumentsParsingMode & #ARG_PREFIX_WINDOWS)
 		PrintN("Use /? to see available options")
 	EndIf
 	
@@ -225,48 +229,48 @@ EndProcedure
 ;- Procedures: Options Registerers
 ;
 
-Procedure RegisterShortOption(OptShort.c, OptDesc.s="no-description", OptValue.b=#ARG_VALUE_NONE, OptDefaultValue.s="")
+Procedure RegisterShortOption(OptShort.c, OptDesc.s="no-description", OptProperties.b=#ARG_VALUE_NONE, OptDefaultValue.s="")
 	AddElement(ArgsList())
 	ArgsList()\FlagShort = Chr(OptShort)
 	ArgsList()\FlagLong = ""
 	ArgsList()\FlagDescription = OptDesc
 	
-	If Not (OptValue = #ARG_VALUE_NONE Or OptValue = #ARG_VALUE_ANY Or OptValue = #ARG_VALUE_JOINED Or OptValue = #ARG_VALUE_SEPARATED)
+	If Not OptProperties & (#ARG_VALUE_NONE | #ARG_VALUE_ANY | #ARG_VALUE_JOINED | #ARG_VALUE_SEPARATED)
 		Debug "Error: No ARG_VALUE_* constant given to register " + OptShort
 		End 1
 	EndIf
 	
-	ArgsList()\ValueType = OptValue
+	ArgsList()\ValueType = OptProperties
 	ArgsList()\DefaultValue = OptDefaultValue
 EndProcedure
 
-Procedure RegisterLongOption(OptLong.s, OptDesc.s="no-description", OptValue.b=#ARG_VALUE_NONE, OptDefaultValue.s="")
+Procedure RegisterLongOption(OptLong.s, OptDesc.s="no-description", OptProperties.b=#ARG_VALUE_NONE, OptDefaultValue.s="")
 	AddElement(ArgsList())
 	ArgsList()\FlagShort = ""
 	ArgsList()\FlagLong = OptLong
 	ArgsList()\FlagDescription = OptDesc
 	
-	If Not (OptValue = #ARG_VALUE_NONE Or OptValue = #ARG_VALUE_ANY Or OptValue = #ARG_VALUE_JOINED Or OptValue = #ARG_VALUE_SEPARATED)
+	If Not OptProperties & (#ARG_VALUE_NONE | #ARG_VALUE_ANY | #ARG_VALUE_JOINED | #ARG_VALUE_SEPARATED)
 		Debug "Error: No ARG_VALUE_* constant given to register " + OptLong
 		End 1
 	EndIf
 	
-	ArgsList()\ValueType = OptValue
+	ArgsList()\ValueType = OptProperties
 	ArgsList()\DefaultValue = OptDefaultValue
 EndProcedure
 
-Procedure RegisterCompleteOption(OptShort.c, OptLong.s, OptDesc.s="no-description", OptValue.b=#ARG_VALUE_NONE, OptDefaultValue.s="")
+Procedure RegisterCompleteOption(OptShort.c, OptLong.s, OptDesc.s="no-description", OptProperties.b=#ARG_VALUE_NONE, OptDefaultValue.s="")
 	AddElement(ArgsList())
 	ArgsList()\FlagShort = Chr(OptShort)
 	ArgsList()\FlagLong = OptLong
 	ArgsList()\FlagDescription = OptDesc
 	
-	If Not (OptValue = #ARG_VALUE_NONE Or OptValue = #ARG_VALUE_ANY Or OptValue = #ARG_VALUE_JOINED Or OptValue = #ARG_VALUE_SEPARATED)
+	If Not OptProperties & (#ARG_VALUE_NONE | #ARG_VALUE_ANY | #ARG_VALUE_JOINED | #ARG_VALUE_SEPARATED)
 		Debug "Error: No ARG_VALUE_* constant given to regiister " + OptShort + " / " + OptLong
 		End 1
 	EndIf
 	
-	ArgsList()\ValueType = OptValue
+	ArgsList()\ValueType = OptProperties
 	ArgsList()\DefaultValue = OptDefaultValue
 EndProcedure
 
@@ -401,9 +405,10 @@ Procedure ParseArguments(ParsingMode.b=#ARG_PREFIX_ANY, UsageErrorTriggers.b = %
 	Wend
 EndProcedure
 
-; IDE Options = PureBasic 5.50 (Windows - x64)
-; CursorPosition = 48
-; FirstLine = 87
-; Folding = gw-
+; IDE Options = PureBasic 5.60 (Windows - x86)
+; CursorPosition = 70
+; FirstLine = 57
+; Folding = w--
 ; EnableXP
+; CompileSourceDirectory
 ; EnableUnicode
