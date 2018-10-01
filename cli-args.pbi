@@ -1,22 +1,22 @@
-﻿; ╔═════════════════════════════════════════════════════════╦════════╗
-; ║ Purebasic Utils - Cli-args !!!DEPRECATED!!!             ║ v0.0.1 ║
-; ╠═════════════════════════════════════════════════════════╩════════╣
-; ║ This module can be used to easily parse launch arguments and     ║
-; ║  use them in projects.                                           ║
-; ╟──────────────────────────────────────────────────────────────────╢
-; ║ Additional infos:                                                ║
-; ║  If you want To use "sub-command" like git, you can simply       ║
-; ║   use ProgramParameter() once before calling ParseArguments().   ║
-; ║  And then you can start registering options depending on the     ║
-; ║   "sub-command".                                                 ║
-; ║  However, you won't be able to easily change the output of       ║
-; ║   PrintHelpText() without having to make one yourself.           ║
-; ╟──────────────────────────────────────────────────────────────────╢
-; ║ Requirements: PB v5.60+ (Not tested with previous versions)      ║
-; ╟──────────────────────────────────────────────────────────────────╢
-; ║ Links: github.com/aziascreations/cli-args-pb (Current Version)   ║
-; ║        github.com/aziascreations/cli-args-pb/??? (Legacy)        ║
-; ╚══════════════════════════════════════════════════════════════════╝
+﻿; ╔═══════════════════════════════════════════════════════════════════╦════════╗
+; ║ PB-Cli-Args-Parser                                By Bozet Herwin ║ v0.0.2 ║
+; ╠═══════════════════════════════════════════════════════════════════╩════════╣
+; ║ Note: The major version number will directly jump to 2 to avoid problems   ║
+; ║        with the legacy versions.                                           ║
+; ╟────────────────────────────────────────────────────────────────────────────╢
+; ║ Requirements: PB v5.62+ (Not tested with previous versions)                ║
+; ║               Will be tested on older versions (4.10/LTS - 5.60+)          ║
+; ╟────────────────────────────────────────────────────────────────────────────╢
+; ║ Links:                                                                     ║
+; ║     github.com/aziascreations/PB-Cli-Args-Parser             (2+.*)        ║
+; ║     github.com/aziascreations/PB-Cli-Args-Parser/tree/legacy (1.*)         ║
+; ╟────────────────────────────────────────────────────────────────────────────╢
+; ║ License: Apache V2 (See GitHub repo for more info)                         ║
+; ╚════════════════════════════════════════════════════════════════════════════╝
+
+; Note:
+; PB4.10 doesn't recognise the .i type !
+; Maybe go from the 4.? LTS to current
 
 ; Docs:
 
@@ -67,16 +67,23 @@ EndStructure
 
 ;Enumeration CliAr
 
-EnumerationBinary IDK1
-	#CLI_ARG_HIDDEN
+;- Consts
+
+EnumerationBinary CliArgFlags
+	#CLI_FLAG_DEFAULT
 	
-	#CLI_ARG_OPTION ; Meansthe argument has a value (expained in the standard)
+	#CLI_FLAG_OPTION ; Means the argument has a value (expained in the standard)
+	#CLI_FLAG_VALUE_OPTIONAL
+	#CLI_FLAG_VALUE_MULTIPLE ; operands or is this term reserved for the default one ?
 	
-	#CLI_ARG_DEFAULT
+	#CLI_FLAG_VALUE_POS_SEPARATED
+	#CLI_FLAG_VALUE_POS_JOINED ; With an = sign like "gcc j=4 ..."
 	
-	#CLI_ARG_HAS_MULTIPLE_VALUES
-	
+	#CLI_FLAG_HIDDEN ; Won't be shown in the default usage error text
+					 ; Added as the last one since it can vary from one implemenntation to another.
 EndEnumeration
+
+;#CLI_FLAG_VALUE_DEFAULT_POSITION = #CLI_FLAG_VALUE_SEPARATED
 
 Enumeration IDK3 ; A binary one could be used for multiple ones
 				 ; Would allow the use of warnings if needed.
@@ -103,7 +110,9 @@ Enumeration IDK2
 EndEnumeration
 
 ;#CLI_ARG_ARGUMENT = %00000000
-#CLI_ARG_HAS_VALUE = #CLI_ARG_OPTION
+
+; Temporarely commented
+;#CLI_ARG_HAS_VALUE = #CLI_ARG_OPTION
 
 ; #CLI_ARGS_PREFIX_WINDOWS = #CLI_ARGS_PREFIX_DOS
 ; #CLI_ARGS_PREFIX_SLASH   = #CLI_ARGS_PREFIX_DOS
@@ -197,8 +206,55 @@ Procedure.b DoesVerbExists()
 	
 EndProcedure
 
+
+
+
 ;- !!
 ; TODO: GetUsedVerb* by walking the verb tree
+
+; ?: Return a bool or a ptr to theparent or searched verb ?
+;    Just a bool here since it is a "question"
+;    A GetRegisteredVerb could be used in conjuction with this to get the ptr
+
+; TODO: Use the cleaning "flags" for here too.
+Procedure.b IsVerbRegistered(*Verb.CliVerb, Verb$, SearchMode.i = 0)
+	;If *Verb
+		ForEach *Verb\Verbs()
+			If *Verb\Verbs()\Verb$ = Verb$
+				ProcedureReturn ListIndex(*Verb\Verbs())
+			EndIf
+		Next
+	;Else
+	;	DebuggerError("Null pointer given !")
+	;EndIf
+	
+	ProcedureReturn 0 ; or #False ?
+EndProcedure
+
+; NOTE: Not really tested ! (Will have to be since it's gonna be used when cleaning !, or is it ?)
+Procedure.l GetRegisteredVerb(*Verb.CliVerb, Verb$, SearchMode.i = 0)
+	;If *Verb
+		Protected VerbIndex.i = IsVerbRegistered(*Verb, Verb$, SearchMode)
+		
+		If VerbIndex
+			SelectElement(*Verb\Verbs(), VerbIndex)
+			Protected *TempVerbPtr.CliVerb = *Verb\Verbs()
+			;Debug "T1-"+*TempVerbPtr\Verb$
+			ProcedureReturn *TempVerbPtr
+			
+ 			;Protected *TempVerbPtr.CliVerb = SelectElement(*Verb\Verbs(), VerbIndex)
+ 			;Debug "T1-"+*TempVerbPtr\Verb$
+			;ProcedureReturn *TempVerbPtr
+			
+			;ProcedureReturn SelectElement(*Verb\Verbs(), VerbIndex)
+		Else
+			ProcedureReturn #Null
+		EndIf
+	;Else
+	;	DebuggerError("Null pointer given !")
+	;	ProcedureReturn #Null
+	;EndIf
+EndProcedure
 
 Procedure.b isArgumentRegistered(*Verb.CliVerb, ArgShort.c = 0, ArgLong.s = #Null$)
 	If *Verb And ArgShort And ArgLong <> #Null$ And ListSize(*Verb\Args())
@@ -277,39 +333,86 @@ EndMacro
 ; Tree Dumping procedure & macro
 ; The compiler might not pick up on the fact that this procedure does nothing without the debugger.
 ; Appart from modifying the "list index", maybe.
+
+; This procedure is quickly cobbled together, but it works and should one be used when debugging.
 CompilerIf #PB_Compiler_Debugger
 	
 	; Walks trough the whole thing in the debugger.
-	Procedure DumpVerbTree(*Verb.CliVerb, Depth.i = 0)
-		Debug Space(Depth) + "Verb: " + *Verb\Verb$
-		Debug Space(Depth) + "Desc.: " + *Verb\Description$
+	Procedure DumpVerbTree(*Verb.CliVerb, Depth.i = 0, Base$ = #Null$)
+		;Debug "+--|"
 		
-		Debug Space(Depth) + Str(ListSize(*Verb\Args())) + " argument(s):"
-		ForEach *Verb\Args()
-			If *Verb\Args()\Short And *Verb\Args()\Long$ <> #Null$
-				Debug Space(Depth+2) + "'" + Chr(*Verb\Args()\Short) + "' - " + 
-				      #DOUBLEQUOTE$ + *Verb\Args()\Long$ + #DOUBLEQUOTE$
-			ElseIf *Verb\Args()\Short
-				Debug Space(Depth+2) + "'" + Chr(*Verb\Args()\Short) + "'"
-			Else
-				Debug Space(Depth+2) + #DOUBLEQUOTE$ + *Verb\Args()\Long$ + #DOUBLEQUOTE$
-			EndIf
-			
-			Debug Space(Depth+2) + "Desc.: " + *Verb\Args()\Description$
-			Debug Space(Depth+2) + "- - -"
-		Next
-	
-		Debug Space(Depth) + Str(ListSize(*Verb\Verbs())) + " sub-verb(s):"
-		ForEach *Verb\Verbs()
-			DumpVerbTree(*Verb\Verbs(), Depth + 4)
-		Next
+		If Len(Base$)
+			Debug RTrim(RTrim(Base$), "|") + "+- " + *Verb\Verb$
+		Else
+			Debug "_ROOT_"
+			Base$ = "|" + Space(2)
+		EndIf
 		
-		Debug Space(Depth) + "- -"
+		Debug Base$ + "Desc.: "+*Verb\Description$
+		
+		If *Verb\IsUsed
+			Debug Base$ + "IsUsed: True"
+		Else
+			Debug Base$ + "IsUsed: False"
+		EndIf
+		
+		If *Verb\ContinueProcedure
+			Debug Base$ + "Has continue callback"
+		EndIf
+		
+		If *Verb\UsageErrorProcedure
+			Debug Base$ + "Has usage error callback"
+		EndIf
+		
+		Debug Base$
+		
+		If ListSize(*Verb\Args())
+			Debug Base$ + "Argument(s): ["+Str(ListSize(*Verb\Args()))+"]"
+			;ArgBase$ = Base$ + "|" + Space(3)
+			ArgBase$ = RTrim(RTrim(Base$ + "|" + Space(2)), "|") + "+- "
+			ContBase$ = Base$ + "|" + Space(2)
+			ForEach *Verb\Args()
+				Title$ = ArgBase$
+				If *Verb\Args()\Short
+					Title$ + "'"+ Chr(*Verb\Args()\Short) +"' "
+				EndIf
+				If *Verb\Args()\Long$ <> #Null$
+					Title$ + #DOUBLEQUOTE$ + *Verb\Args()\Long$ + #DOUBLEQUOTE$
+				EndIf
+				
+				Debug Title$
+				
+				If *Verb\Args()\Description$ <> #Null$
+					Debug ContBase$ + "Desc.: "+*Verb\Args()\Description$
+				EndIf
+				
+				If *Verb\Args()\IsUsed
+					Debug ContBase$ + "IsUsed: True"
+				Else
+					Debug ContBase$ + "IsUsed: False"
+				EndIf
+				
+				If ListIndex(*Verb\Args()) <> ListSize(*Verb\Args()) - 1
+					Debug ContBase$
+				EndIf
+				
+				; More infos
+				
+			Next
+			Debug Base$
+		EndIf
+		
+		If ListSize(*Verb\Verbs())
+			Debug Base$ + "Sub-Verb(s): ["+Str(ListSize(*Verb\Verbs()))+"]"
+			ForEach *Verb\Verbs()
+				DumpVerbTree(*Verb\Verbs(), Depth + 1, Base$ + "|" + Space(2))
+			Next
+		EndIf
 		
 	EndProcedure
 	
 CompilerElse
-	Macro DumpVerbTree(Verb, Depth) : EndMacro
+	Macro DumpVerbTree(Verb, Depth, Base$) : EndMacro
 CompilerEndIf
 
 
@@ -323,12 +426,88 @@ Procedure.s ProcessArgument()
 	
 EndProcedure
 
-Procedure ParseArguments()
+Procedure ParseArguments(*RootVerb.CliVerb, Flags.i = #CLI_ARGS_PREFIX_UNIX)
+	Protected CurrentArgumentIndex.i = 0, CurrentArgument$ = ProgramParameter(0)
+	Protected *CurrentVerb.CliVerb = *RootVerb
 	
+	If Not *RootVerb
+		DebuggerError("Null pointer given !")
+	EndIf
+	
+	While CurrentArgument$ <> #Null$
+		Debug "Processing: "+CurrentArgument$
+		Debug "Current Verb: " + *CurrentVerb\Verb$
+		
+		If Asc(CurrentArgument$) = '-'
+			If Len(CurrentArgument$) >= 3 And Left(CurrentArgument$, 2) = "--"
+				
+			ElseIf Len(CurrentArgument$) >= 2 ; Only one - is implied
+				
+			EndIf
+		ElseIf Asc(CurrentArgument$) = '/'
+			
+		Else ; Verb or text
+			; Will have to keep the current one in memory, and return a ptr to the used one ?
+			; For both ?
+			Protected *NewlyUsedVerb.CliVerb = GetRegisteredVerb(*CurrentVerb, CurrentArgument$)
+			
+			Debug "A-" + *CurrentVerb\Verb$
+			
+			If *NewlyUsedVerb
+				Debug "B-" + *NewlyUsedVerb\Verb$
+				*CurrentVerb = *NewlyUsedVerb
+				*CurrentVerb\IsUsed = #True
+				; Verb
+			Else
+				; Text
+				; Grab the default one and do your thing, and if no default, shit the bed.
+			EndIf
+		EndIf
+		
+		; Allows for vaguely out of order operations
+		CurrentArgumentIndex + 1
+		CurrentArgument$ = ProgramParameter(CurrentArgumentIndex)
+	Wend
+	
+	Debug "Current Verb: " + *CurrentVerb\Verb$
+	
+	ProcedureReturn *CurrentVerb
 EndProcedure
 
+
+CompilerIf #PB_Compiler_IsMainFile
+	Root = CreateRootVerb("Program root")
+	CmdInit = CreateVerb("init", Root, "Init command")
+	CmdInitBase = CreateVerb("base", CmdInit, "Init Base command")
+	CmdClone = CreateVerb("clone", Root, "Clone command")
+	
+	RegisterArgument(Root, 'h', "help", "Prints this help (R)", 0)
+	RegisterArgument(CmdInit, 'h', "help", "Prints this help (I)", #CLI_FLAG_HIDDEN)
+	RegisterArgument(CmdInitBase, 'h', "help", "Prints this help (IB)", 0)
+	RegisterArgument(CmdClone, 'h', "help", "Prints this help (C)", 0)
+	RegisterArgument(Root, 'v', "version", "Prints the version", 0)
+	
+	If Root <> #Null
+		DumpVerbTree(Root)
+		
+		End
+		
+		*UsedVerb = ParseArguments(Root)
+		
+		If *UsedVerb <> #Null
+			DumpVerbTree(*UsedVerb)
+		Else
+			Debug "NULL PTR !!!"
+		EndIf
+	Else
+		Debug "NULL PTR !!!"
+	EndIf
+	
+CompilerEndIf
+
 ; IDE Options = PureBasic 5.62 (Windows - x64)
-; CursorPosition = 278
-; FirstLine = 273
+; CursorPosition = 251
+; FirstLine = 180
 ; Folding = ----
 ; EnableXP
+; CommandLine = init --help
