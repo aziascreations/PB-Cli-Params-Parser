@@ -1,5 +1,5 @@
 ﻿; ╔═══════════════════════════════════════════════════════════════════╦════════╗
-; ║ PB-Cli-Args-Parser                                By Bozet Herwin ║ v0.0.2 ║
+; ║ PB-Cli-Args-Parser                                By Bozet Herwin ║ v0.0.3 ║
 ; ╠═══════════════════════════════════════════════════════════════════╩════════╣
 ; ║ Note: The major version number will directly jump to 2 to avoid problems   ║
 ; ║        with the legacy versions.                                           ║
@@ -40,12 +40,13 @@ Structure CliArguments
 	Flags.i
 	
 	Values.s[0]
-	; Option stuff
+	; Option stuff - What ???
 	
 	IsUsed.b ; ??? (Maybe for simple flags and stuff)
 EndStructure
 
 ; TODO: Maybe keep a pointer to the parent for an easier cleanup if FreeVerb(...) used.
+; Maybe for both the argument and verb ?
 
 Structure CliVerb
 	Verb$
@@ -104,9 +105,21 @@ EndEnumeration
 
 #CLI_ARGS_CLEANING_RECURSIVE = #CLI_ARGS_CLEANING_FULL
 
-Enumeration IDK2
-	#CLI_ARGS_PREFIX_DOS
-	#CLI_ARGS_PREFIX_UNIX
+EnumerationBinary CliParserFlags
+	#CLI_PARSER_PREFIX_DOS
+	#CLI_PARSER_PREFIX_UNIX
+	
+	#CLI_PARSER_STOP_AT_FIRST_USED_VERB ; TODO: Find a shorter name...
+	
+	#CLI_PARSER_INTERNAL_HAS_JOINED_VALUE
+EndEnumeration
+
+Enumeration IDK5
+	#CLI_PROCESSING_LONG
+	#CLI_PROCESSING_SHORT_SINGLE
+	#CLI_PROCESSING_SHORT_COMBINED
+	#CLI_PROCESSING_VERB
+	#CLI_PROCESSING_TEXT
 EndEnumeration
 
 ;#CLI_ARG_ARGUMENT = %00000000
@@ -189,12 +202,43 @@ EndProcedure
 
 ;- ?1
 
-Procedure.b IsArgumentUsed()
+; Could lead to some errors if --a and -a were registered as different arguments
+Procedure.b IsArgumentUsed(*Verb.CliVerb, Argument$, SearchMode.i = 0)
+	If *Verb And Argument$ <> #Null$
+		ForEach *Verb\Args()
+			If (Chr(*Verb\Args()\Short) = Argument$ Or *Verb\Args()\Long$ = Argument$) And *Verb\Args()\IsUsed
+				ProcedureReturn #True
+			EndIf
+		Next
+	Else
+		DebuggerError("NULL PTR !")
+	EndIf
 	
+	ProcedureReturn #False
 EndProcedure
 
-Procedure.b IsVerbUsed()
+; Leave Verb$ to its default value to read the IsUsed property directly of of the given verb.
+; If a value is given, it will check the sub-verbs instead.
+Procedure.b IsVerbUsed(*Verb.CliVerb, Verb$) ;, SearchMode.i = 0)
+	If *Verb
+		If Verb$ <> #Null$
+			ForEach *Verb\Verbs()
+				If *Verb\Verbs()\Verb$ = Verb$
+					If *Verb\Verbs()\IsUsed
+						ProcedureReturn #True
+					Else
+						Break ; Or simply return false ?
+					EndIf
+				EndIf
+			Next
+		Else
+			ProcedureReturn Bool(*Verb\Verb$ = Verb$ And *Verb\IsUsed)
+		EndIf
+	Else
+		DebuggerError("NULL PTR !")
+	EndIf
 	
+	ProcedureReturn #False
 EndProcedure
 
 ; Why ?
@@ -202,11 +246,10 @@ Procedure.b IsVerbRoot(*Verb.CliVerb)
 	
 EndProcedure
 
-Procedure.b DoesVerbExists()
-	
-EndProcedure
-
-
+; Replaced by is VerbRegistered.b(...)
+; Procedure.b DoesVerbExists()
+; 	
+; EndProcedure
 
 
 ;- !!
@@ -299,7 +342,7 @@ Procedure.l RegisterArgument(*Verb.CliVerb, ArgShort.c, ArgLong.s, Description.s
 		; Insertion
 		; TODO: Cleanup in case of an error
 		LastElement(*Verb\Args())
-		If InsertElement(*Verb\Args())
+		If AddElement(*Verb\Args())
 			*Verb\Args() = *Argument
 		Else
 			Debug "Insertion ERROR !"
@@ -321,7 +364,6 @@ EndProcedure
 ; EndProcedure
 
 ; Prevents useless procedure calls since the compiler might not optimize that.
-
 Macro RegisterShortArgument(ContainerVerb, ArgShort, Description, Flags)
 	RegisterArgument(ContainerVerb, ArgShort, #Null$, Description, Flags)
 EndMacro
@@ -330,9 +372,16 @@ Macro RegisterLongArgument(ContainerVerb, ArgLong, Description, Flags)
 	RegisterArgument(ContainerVerb, 0, ArgLong, Description, Flags)
 EndMacro
 
+;- Were arguments used in previous verbs procedure ?
+
+;- Was option used in parent procedure ?
+
 ; Tree Dumping procedure & macro
 ; The compiler might not pick up on the fact that this procedure does nothing without the debugger.
 ; Appart from modifying the "list index", maybe.
+
+; Reset all the variables for a second parsing or something like that
+;- Reset Verb Tree() ?
 
 ; This procedure is quickly cobbled together, but it works and should one be used when debugging.
 CompilerIf #PB_Compiler_Debugger
@@ -386,6 +435,10 @@ CompilerIf #PB_Compiler_Debugger
 					Debug ContBase$ + "Desc.: "+*Verb\Args()\Description$
 				EndIf
 				
+				If *Verb\Args()\Flags & #CLI_FLAG_HIDDEN
+					Debug ContBase$ + "Hidden"
+				EndIf
+				
 				If *Verb\Args()\IsUsed
 					Debug ContBase$ + "IsUsed: True"
 				Else
@@ -420,27 +473,175 @@ Procedure PrintUsage()
 	
 EndProcedure
 
+; Explodes the given String (s$), every delimiter (d$), into the array (a$()).
+; Returns: The number of entries in the Array.
+; Source: Demivec @ http://www.purebasic.fr/english/viewtopic.php?f=13&t=41704
+Procedure ExplodeStringToArray(Array a$(1), s$, d$, cleanString.b=#True)
+	If cleanString
+		s$ = Trim(s$, d$)
+		
+		While FindString(s$, d$+d$)
+			s$ = ReplaceString(s$, d$+d$, d$)
+		Wend
+	EndIf
 
+	Protected count, i
+	count = CountString(s$,d$) + 1
+	
+	Dim a$(count)
+	For i = 1 To count
+		a$(i - 1) = StringField(s$,i,d$)
+	Next
+	ProcedureReturn count
+EndProcedure
 
-Procedure.s ProcessArgument()
+Procedure.s ProcessArgument(*RootVerb.CliVerb, CurrentArgumentIndex.i, ProcessingFlags.i)
+	;Debug "Processing: ?"
+	CompilerIf #PB_Compiler_Debugger
+		If ProcessingFlags = #CLI_PROCESSING_LONG
+			Debug "Processing long..."
+		ElseIf ProcessingFlags = #CLI_PROCESSING_SHORT_SINGLE
+			Debug "Processing single short..."
+		ElseIf ProcessingFlags = #CLI_PROCESSING_SHORT_COMBINED
+			Debug "Processing joined shorts..."
+		ElseIf ProcessingFlags = #CLI_PROCESSING_TEXT
+			Debug "Processing default text..."
+		Else
+			Debug "Processing verb..."
+		EndIf
+	CompilerEndIf
+	
+	
+	
 	
 EndProcedure
 
-Procedure ParseArguments(*RootVerb.CliVerb, Flags.i = #CLI_ARGS_PREFIX_UNIX)
+Procedure ParseArguments(*RootVerb.CliVerb, Flags = #CLI_PARSER_PREFIX_UNIX, FirstParameterIndex.i = -1, CustomParameters$ = "", Delimiter$ = " ")
+	; EnableExplicit related stuff...
+	Protected *CurrentVerb.CliVerb = *RootVerb
+	Protected CurrentParameterIndex.i = 0
+	Protected Dim Parameters$(0)
+	Protected i.i, ArgProcessorFlags = 0 ; TODO: Check if the 0 could cause some sign error
+	
+	; Basic check(s)
+	If Not *CurrentVerb
+		DebuggerError("Null pointer given !")
+		ProcedureReturn #False ; ???
+	EndIf
+	
+	; Reading parameters into an array
+	
+	; This array is not really needed since any procedure can call "ProgramParameter([n])", but
+	;  it can quickly become unclear which current entry is being processed.
+	; And it allows the use of custom program parameters / preprocessing.
+	; And it doesn't waste too much ressources, maybe less than calling ProgramParameter() over and over even.
+	; Actually it can be usefull if "FirstParameterIndex" to avoid using stuff like:
+	;  Var$ = ProgramParameter(StartIndex + CurrentIndex + OffsetForSomething)...
+	
+	; TODO: Use FirstParameterIndex here !
+	
+	If CustomParameters$ <> #Null$ And Delimiter$ <> #Null$
+		ExplodeStringToArray(Parameters$(), CustomParameters$, Delimiter$)
+	Else
+		ReDim Parameters$(CountProgramParameters())
+		
+		For i=0 To CountProgramParameters()
+			Parameters$(i) = ProgramParameter(i)
+		Next
+	EndIf
+	
+	; Preparing some stuff...
+	; ResetVerbTree(*CurrentVerb) ; Resets the root - Don't call this inside any procedure ine this module !
+	*CurrentVerb\IsUsed = #True
+	
+	; Now we're getting into it.  Oh mama, get ready for the spaghetti.
+	While CurrentParameterIndex < ArraySize(Parameters$())
+		ArgProcessorFlags = 0
+		;Debug Parameters$(CurrentParameterIndex)
+		
+		If Asc(CurrentArgument$) = '-'
+			; TODO: Verify is "#.*_UNIX" is used !
+			; TODO: Check if there is a joined variable here ?
+			; INFO: ProcessArgument(...) will take care of separating them !
+			; TODO: See if the use of combined value could be forbidden with #CLI_PARSER _... flags ?
+			If FindString(CurrentArgument$, "=")
+				ArgProcessorFlags = ArgProcessorFlags | #CLI_PARSER_INTERNAL_HAS_JOINED_VALUE
+			EndIf
+			
+			If Len(CurrentArgument$) >= 3 And Left(CurrentArgument$, 2) = "--"
+				;ProcessArgument(LTrim(CurrentArgument$, "-"), CurrentArgumentIndex, #CLI_PROCESSING_LONG)
+				; 1 long
+				
+				; process (not check ?)
+			ElseIf Len(CurrentArgument$) >= 2 And Left(CurrentArgument$, 2) <> "--"
+				; 1 or more shorts
+				
+				; if has joined value, no more than 1 short argument !
+				If ArgProcessorFlags & #CLI_PARSER_INTERNAL_HAS_JOINED_VALUE
+					
+				EndIf
+				
+				; process, separately if needed
+				; INFO: #CLI_PROCESSING_SHORT_COMBINED will be usefull if an arg inside also requires a value. 
+				; What about optional values ?
+			Else
+				; The thing is fucked.
+				; TODO: add an error return
+			EndIf
+		ElseIf Asc(CurrentArgument$) = '/'
+			
+		Else ; Verb or text
+			Protected *NewlyUsedVerb.CliVerb = GetRegisteredVerb(*CurrentVerb, CurrentArgument$)
+			
+			; TODO: Check if a text parameter couldn't be interpreted as a verb by error
+			
+			If *NewlyUsedVerb
+				; The processed entry is a verb
+				
+				; Not sure on how to handle it :/
+				;If Flags & #CLI_PARSER_STOP_AT_FIRST_USED_VERB
+				;	ProcedureReturn *CurrentVerb
+				;Else
+					*CurrentVerb = *NewlyUsedVerb
+					*CurrentVerb\IsUsed = #True
+				;EndIf
+			Else
+				; Text
+				; Grab the default one and do your thing, and if no default, shit the bed.
+			EndIf
+		EndIf
+		
+		
+		
+		
+		CurrentParameterIndex = CurrentParameterIndex + 1
+	Wend
+	
+	
+EndProcedure
+
+; TODO: define what should be returned and how !!
+; #False (0) and <0 for errors since the used verb ptr can be returned.
+Procedure.b _ParseArguments(*RootVerb.CliVerb, Flags.i = #CLI_PARSER_PREFIX_UNIX)
 	Protected CurrentArgumentIndex.i = 0, CurrentArgument$ = ProgramParameter(0)
 	Protected *CurrentVerb.CliVerb = *RootVerb
 	
 	If Not *RootVerb
 		DebuggerError("Null pointer given !")
+		ProcedureReturn #False ; ???
 	EndIf
 	
+	; TODO: Reset the getprogramparameter position ?
+	; By default, the root verb is used.
+	*RootVerb\IsUsed = #True
+	
 	While CurrentArgument$ <> #Null$
-		Debug "Processing: "+CurrentArgument$
+		Debug "Parsing: "+CurrentArgument$
 		Debug "Current Verb: " + *CurrentVerb\Verb$
 		
 		If Asc(CurrentArgument$) = '-'
 			If Len(CurrentArgument$) >= 3 And Left(CurrentArgument$, 2) = "--"
-				
+				;ProcessArgument(LTrim(CurrentArgument$, "-"), CurrentArgumentIndex, #CLI_PROCESSING_LONG)
 			ElseIf Len(CurrentArgument$) >= 2 ; Only one - is implied
 				
 			EndIf
@@ -451,10 +652,10 @@ Procedure ParseArguments(*RootVerb.CliVerb, Flags.i = #CLI_ARGS_PREFIX_UNIX)
 			; For both ?
 			Protected *NewlyUsedVerb.CliVerb = GetRegisteredVerb(*CurrentVerb, CurrentArgument$)
 			
-			Debug "A-" + *CurrentVerb\Verb$
+			;Debug "A-" + *CurrentVerb\Verb$
 			
 			If *NewlyUsedVerb
-				Debug "B-" + *NewlyUsedVerb\Verb$
+				;Debug "B-" + *NewlyUsedVerb\Verb$
 				*CurrentVerb = *NewlyUsedVerb
 				*CurrentVerb\IsUsed = #True
 				; Verb
@@ -474,6 +675,7 @@ Procedure ParseArguments(*RootVerb.CliVerb, Flags.i = #CLI_ARGS_PREFIX_UNIX)
 	ProcedureReturn *CurrentVerb
 EndProcedure
 
+; ParseStringAsArguments ?
 
 CompilerIf #PB_Compiler_IsMainFile
 	Root = CreateRootVerb("Program root")
@@ -488,11 +690,12 @@ CompilerIf #PB_Compiler_IsMainFile
 	RegisterArgument(Root, 'v', "version", "Prints the version", 0)
 	
 	If Root <> #Null
-		DumpVerbTree(Root)
+		;DumpVerbTree(Root)
+		;End
+		
+		*UsedVerb = ParseArguments(Root, #CLI_PARSER_PREFIX_UNIX, -1, "init --help --get-fucked", " ")
 		
 		End
-		
-		*UsedVerb = ParseArguments(Root)
 		
 		If *UsedVerb <> #Null
 			DumpVerbTree(*UsedVerb)
@@ -506,8 +709,8 @@ CompilerIf #PB_Compiler_IsMainFile
 CompilerEndIf
 
 ; IDE Options = PureBasic 5.62 (Windows - x64)
-; CursorPosition = 251
-; FirstLine = 180
-; Folding = ----
+; CursorPosition = 561
+; FirstLine = 469
+; Folding = --04
 ; EnableXP
 ; CommandLine = init --help
