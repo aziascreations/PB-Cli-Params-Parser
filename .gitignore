@@ -1,4 +1,8 @@
 
 Documentation/
+Build/
 
 *.exe
+
+tests.pb
+todo.txt
